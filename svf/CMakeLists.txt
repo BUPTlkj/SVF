@@ -1,6 +1,9 @@
 # Define the core library
 add_library(SvfCore)
 
+set(EIGEN_HOME ${CMAKE_SOURCE_DIR}/ext_include)
+include_directories(${EIGEN_HOME})
+
 # Add the public headers as an include directory
 target_include_directories(SvfCore
   PUBLIC
