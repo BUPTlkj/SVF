@@ -130,37 +130,38 @@ NeuronNode::NodeK ConvNeuronNode::get_type() const{
     return ConvNode;
 }
 
-unsigned int ConvNeuronNode::get_filter_depth() const{
-    return filter_depth;
-}
+//unsigned int ConvNeuronNode::get_filter_depth() const{
+//    return filter_depth;
+//}
 
-unsigned int ConvNeuronNode::get_filter_width() const{
-    return filter_width;
-}
 
-unsigned int ConvNeuronNode::get_filter_height() const{
-    return filter_height;
-}
-
-unsigned int ConvNeuronNode::get_filter_num() const{
-    return filter_num;
-}
-
-std::vector<FilterSubNode> ConvNeuronNode::get_filter() const{
-    return filter;
-}
-
-std::vector<double> ConvNeuronNode::get_bias() const{
-    return bias;
-}
-
-unsigned int ConvNeuronNode::get_padding() const{
-    return padding;
-}
-
-unsigned int ConvNeuronNode::get_stride() const{
-    return stride;
-}
+//unsigned int ConvNeuronNode::get_filter_width() const{
+//    return filter_width;
+//}
+//
+//unsigned int ConvNeuronNode::get_filter_height() const{
+//    return filter_height;
+//}
+//
+//unsigned int ConvNeuronNode::get_filter_num() const{
+//    return filter_num;
+//}
+//
+//std::vector<FilterSubNode> ConvNeuronNode::get_filter() const{
+//    return filter;
+//}
+//
+//std::vector<double> ConvNeuronNode::get_bias() const{
+//    return bias;
+//}
+//
+//unsigned int ConvNeuronNode::get_padding() const{
+//    return padding;
+//}
+//
+//unsigned int ConvNeuronNode::get_stride() const{
+//    return stride;
+//}
 
 /// Constant
 NeuronNode::NodeK ConstantNeuronNode::get_type() const{
@@ -576,7 +577,9 @@ void GraphTraversal::DFS(std::set<const SVF::NeuronNode *> &visited, std::vector
                     newIRRes = solver.MaxPoolNeuronNodeevaluate(node);
                     std::cout<<"FINISH MAXPOOLING"<<std::endl;
                 } else if (neighbor->get_type() == 3) {
-                    const SVF::ConvNeuronNode *node = SVFUtil::dyn_cast<SVF::ConvNeuronNode>(neighbor);
+                    const SVF::ConvNeuronNode *node = static_cast<SVF::ConvNeuronNode *>(neighbor);
+                    std::cout<<"TEST  ID  COnv"<<neighbor->getId()<<std::endl;
+                    std::cout<<"TEST  ID  COnv"<<node->getId()<<std::endl;
                     solver.setIRMatrix(IRRes);
                     newIRRes = solver.ConvNeuronNodeevaluate(node);
                     std::cout<<"FINISH Conv"<<std::endl;

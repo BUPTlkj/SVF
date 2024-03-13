@@ -311,16 +311,33 @@ public:
     }
 
 public:
-    inline unsigned get_filter_depth() const;
-    inline unsigned get_filter_width() const;
-    inline unsigned get_filter_height() const;
-    inline unsigned get_filter_num() const;
-    inline std::vector<FilterSubNode> get_filter() const;
+    inline unsigned get_filter_depth() const{
+        return filter_depth;
+    };
+    inline unsigned get_filter_width() const{
+        return filter_width;
+    };
+    inline unsigned get_filter_height() const{
+        return filter_height;
+    };
+    inline unsigned get_filter_num() const{
+        return filter_num;
+    };
 
-    inline std::vector<double> get_bias() const;
+    inline std::vector<FilterSubNode> get_filter() const{
+        return filter;
+    };
 
-    inline unsigned get_padding() const;
-    inline unsigned get_stride() const;
+    inline std::vector<double> get_bias() const{
+        return bias;
+    };
+
+    inline unsigned get_padding() const{
+        return padding;
+    };
+    inline unsigned get_stride() const{
+        return stride;
+    };
 
 public:
     NodeK get_type() const override;

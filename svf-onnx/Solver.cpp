@@ -160,32 +160,29 @@ std::vector<Eigen::MatrixXd> SolverEvaluate::FullyConNeuronNodeevaluate( const S
 }
 
 std::vector<Eigen::MatrixXd> SolverEvaluate::ConvNeuronNodeevaluate( const SVF::ConvNeuronNode *conv) const{
-    std::cout<<conv->padding<<std::endl;
-    std::cout<<"ConvNodeing......"<<conv->padding<<std::endl;
-    auto padding = conv->padding;
-    std::cout<<"fun0"<<std::endl;
-    auto filter_num = conv->filter_num;
-    auto stride = conv->stride;
-    auto filter = conv->filter;
-    std::cout<<"fun1"<<std::endl;
-    auto filter_depth = conv->filter_depth;
-    auto filter_height = conv->filter_height;
-    auto filter_width = conv->filter_width;
-    auto bias = conv->bias;
+    std::cout<<"ConvNodeing......"<<conv->getId()<<std::endl;
+
+    unsigned filter_num = conv->get_filter_num();
+    auto stride = conv->get_stride();
+    auto padding = conv->get_padding();
+    auto filter = conv->get_filter();
+    auto filter_depth = conv->get_filter_depth();
+    auto filter_height = conv->get_filter_height();
+    auto filter_width = conv->get_filter_width();
+    auto bias = conv->get_bias();
     auto out_height = ((in_x[0].rows() - filter[0].get_height() + 2*padding) / stride) + 1;
     auto out_width = ((in_x[0].cols() - filter[0].get_width() + 2*padding) / stride) + 1;
 
     /// Padding
-    std::cout<<"fun"<<std::endl;
     std::vector<Eigen::MatrixXd> padded_x(in_x.size());
     for (size_t i = 0; i < in_x.size(); ++i) {
         std::cout<<i<<std::endl;
         padded_x[i] = Eigen::MatrixXd::Zero(in_x[i].rows() + 2*padding, in_x[i].cols() + 2*padding);
         padded_x[i].block(padding, padding, in_x[i].rows(), in_x[i].cols()) = in_x[i];
     }
-    std::cout<<"ks"<<std::endl;
 
     /// Calculate the output feature map based on filling and step size
+    std::cout<<"IMPORT FILTER:"<<filter_num<<std::endl;
     std::vector<Eigen::MatrixXd> out(filter_num, Eigen::MatrixXd(out_height, out_width));
     for (int i = 0; i < filter_num; i++) {
         for (int j = 0; j < out_width; j++) {

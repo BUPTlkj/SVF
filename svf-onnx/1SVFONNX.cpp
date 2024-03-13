@@ -703,31 +703,13 @@ public:
         delete dfs; // É¾³ı·ÖÅäµÄÄÚ´æ
     }
 
-
-//    void Traversal(std::vector<Eigen::MatrixXd> in_x)  {
-//        std::set<const SVF::NeuronNode *> visited;
-//        std::vector<const SVF::NeuronNode *> path;
-//        SVF::GraphTraversal *dfs = new SVF::GraphTraversal();
-//
-//        const auto& LastName = OrderedNodeName[OrderedNodeName.size() - 1];
-//        const auto& FirstName = OrderedNodeName[0];
-//        auto FirstNode = getNodeInstanceByName(FirstName);
-//        auto LastNode = getNodeInstanceByName(LastName);
-//
-//        dfs->DFS(visited, path, FirstNode, LastNode, in_x);
-//        auto stringpath = dfs->getPaths();
-//        for (const std::string& paths : stringpath) {
-//            std::cout << paths << std::endl;
-//        }
-//        std::cout << "Test case ONNX passed!\n";
-//    }
 };
 
 
 int main(){
 
-//    std::string address = "/Users/liukaijie/Desktop/operation-py/convSmallRELU__Point.onnx";
-    std::string address = "/Users/liukaijie/Desktop/operation-py/mnist_conv_maxpool.onnx";
+    std::string address = "/Users/liukaijie/Desktop/operation-py/convSmallRELU__Point.onnx";
+//    std::string address = "/Users/liukaijie/Desktop/operation-py/mnist_conv_maxpool.onnx";
 //    std::string address = "/Users/liukaijie/Desktop/operation-py/ffnnRELU__Point_6_500.onnx";
     SVFNN svfnn(address);
     auto nodes = svfnn.get_nodes();
@@ -741,8 +723,8 @@ int main(){
     info.AddEdges();
 //    auto dataset = read_dataset("cifar");
 
-//    SVF::LoadData dataset("cifar");
-    SVF::LoadData dataset("mnist");
+    SVF::LoadData dataset("cifar");
+//    SVF::LoadData dataset("mnist");
     auto x = dataset.read_dataset();
     std::cout<<"Label: "<<x.first.front()<<std::endl;
 

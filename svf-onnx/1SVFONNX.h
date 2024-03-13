@@ -58,8 +58,8 @@ struct ConvNodeInfo
     std::string name;
     std::vector<SVF::FilterSubNode> filter;
     std::vector<double> conbias;
-    std::pair<int, int> strides;
-    std::pair<int, int> pads;
+    std::pair<unsigned , unsigned > strides;
+    std::pair<unsigned , unsigned > pads;
 };
 
 /// ReLu
