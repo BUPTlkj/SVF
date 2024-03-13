@@ -152,7 +152,7 @@ std::vector<Eigen::MatrixXd> SolverEvaluate::FullyConNeuronNodeevaluate( const S
         out.push_back(Eigen::MatrixXd(out_height, out_width));
         for (unsigned j = 0; j < out_height; j++) {
             for (unsigned k = 0; k < out_width; k++) {
-                out[i](j, k) = x_ser(out_width * out_depth * j + out_depth * k + i);
+                out[i](j, k) = val(out_width * out_depth * j + out_depth * k + i);
             }
         }
     }

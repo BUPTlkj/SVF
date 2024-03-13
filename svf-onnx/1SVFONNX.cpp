@@ -670,6 +670,10 @@ public:
     }
 
     void Traversal(std::vector<Eigen::MatrixXd>& in_x) {
+        for(int j=0; j<in_x.size();j++){
+            std::cout<<"Matrix: "<<j<<std::endl;
+            std::cout<<in_x[j]<<std::endl;
+        }
         SVF::NodeID id = 5;
         std::cout<<"NNGraph: NodeID 5: "<<g->hasNeuronNetNode(id)<<std::endl;
         // 注意：现在visited和path存储的是指向SVF::NeuronNodeVariant的指针
@@ -720,13 +724,11 @@ public:
 };
 
 
-
-
 int main(){
 
 //    std::string address = "/Users/liukaijie/Desktop/operation-py/convSmallRELU__Point.onnx";
-//    std::string address = "/Users/liukaijie/Desktop/operation-py/mnist_conv_maxpool.onnx";
-    std::string address = "/Users/liukaijie/Desktop/operation-py/ffnnRELU__Point_6_500.onnx";
+    std::string address = "/Users/liukaijie/Desktop/operation-py/mnist_conv_maxpool.onnx";
+//    std::string address = "/Users/liukaijie/Desktop/operation-py/ffnnRELU__Point_6_500.onnx";
     SVFNN svfnn(address);
     auto nodes = svfnn.get_nodes();
     std::cout<<nodes.size()<<std::endl;
@@ -743,9 +745,11 @@ int main(){
     SVF::LoadData dataset("mnist");
     auto x = dataset.read_dataset();
     std::cout<<"Label: "<<x.first.front()<<std::endl;
-//    SolverEvaluate solver(x.second.front());
-    info.Traversal(x.second.front());
 
+//    SolverEvaluate solver(x.second.front());
+
+//    auto ini = x.second.front()[0];
+    info.Traversal(x.second.front());
 
     return 0;
 }

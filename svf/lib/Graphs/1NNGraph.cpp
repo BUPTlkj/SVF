@@ -2,6 +2,7 @@
 #include "Util/SVFUtil.h"
 #include "SVFIR/SVFIR.h"
 #include "../svf-onnx/Solver.h"
+#include "iomanip"
 #include "../svf-onnx/CheckModels.h"
 
 
@@ -598,6 +599,8 @@ void GraphTraversal::DFS(std::set<const SVF::NeuronNode *> &visited, std::vector
             }
         }
         std::cout << "IRRes content after the loop iteration:" << i << std::endl;
+        std::cout.precision(12);
+        std::cout << std::fixed;
         for (size_t j = 0; j < IRRes.size(); ++j) {
             std::cout << "Matrix " << j << ":\n";
             std::cout << "Rows: " << IRRes[j].rows() << ", Columns: " << IRRes[j].cols() << "\n";
