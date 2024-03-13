@@ -1,29 +1,19 @@
-//
-// Created by Kaijie Liu on 2024/2/9.
-//
-// 图的具体实现
-
 #include "Graphs/NNGraph.h"
-#include "Graphs/NNNode.h"
-#include "Graphs/NNEdge.h"
 #include "Util/SVFUtil.h"
-#include "SVFIR/SVFIR.h"
 
 using namespace SVF;
 
-// ReLu
-ReLuNeuronNode::ReLuNeuronNode(SVF::NodeID id, unsigned int in_w, unsigned int in_h, unsigned int in_d):
-      NeuronNode(id, ReLuNode, in_w, in_h, in_d, in_w, in_h, in_d){}
+/// ReLu
 
 NeuronNode::NodeK ReLuNeuronNode::get_type() const{
     return ReLuNode;
 }
 
-std::vector<Eigen::MatrixXd> NeuronNode::evaluate(const std::vector<Eigen::MatrixXd>& x_in) const{
+std::vector<Eigen::MatrixXd> ReLuNeuronNode::evaluate(const std::vector<Eigen::MatrixXd>& x_in) const{
     std::vector<Eigen::MatrixXd> x_out;
     for (Eigen::MatrixXd mat : x_in) {
-        /* rows表示行数 cols表示列数
-            * 构建一个列表
+        /* rows cols
+            * Construct a List
          */
         Eigen::MatrixXd o(mat.rows(), mat.cols());
         for (unsigned i = 0; i < mat.rows(); i++) {
@@ -31,13 +21,13 @@ std::vector<Eigen::MatrixXd> NeuronNode::evaluate(const std::vector<Eigen::Matri
                 o(i, j) = std::max(0.0, mat(i, j));
             }
         }
-        // 通道
+        /// Channel
         x_out.push_back(o);
     }
     return x_out;
 }
 
-std::vector<Eigen::MatrixXd> NeuronNode::backpropagate(const std::vector<Eigen::MatrixXd>& in_x, const std::vector<Eigen::MatrixXd>& grad) const{
+std::vector<Eigen::MatrixXd> ReLuNeuronNode::backpropagate(const std::vector<Eigen::MatrixXd>& in_x, const std::vector<Eigen::MatrixXd>& grad) const{
     std::vector<Eigen::MatrixXd> x_grad;
     for (unsigned i = 0; i < in_depth; i++) {
         x_grad.push_back(Eigen::MatrixXd(in_height, in_width));
@@ -55,25 +45,14 @@ std::vector<Eigen::MatrixXd> NeuronNode::backpropagate(const std::vector<Eigen::
     return x_grad;
 }
 
-// filter
-FilterSubNode::FilterSubNode(const std::vector<Eigen::MatrixXd>& x) {
-    for (unsigned i = 0; i < x.size(); i++) {
-        for (unsigned j = 0; j < x.size(); j++) {
-            if (x[i].rows() != x[j].rows() || x[i].cols() != x[j].cols()) {
-                throw std::runtime_error("Bad construction of Filter");
-            }
-        }
-    }
-    value = x;
-}
-
+/// filter
 unsigned int FilterSubNode::get_depth() const{
     return value.size();
 }
 
 unsigned int FilterSubNode::get_height() const{
     if (value.size() > 0) {
-        //第一通道
+        /// The first channel
         return value[0].rows();
     }
     else {
@@ -92,7 +71,7 @@ unsigned int FilterSubNode::get_width() const{
 
 double FilterSubNode::dot_product(const SVF::FilterSubNode& val_f) const{
     double sum = 0.0;
-    //校验窗口大小
+    /// Test the size of windows
     if (val_f.get_depth() != get_depth()) {
         throw std::runtime_error("Dimension-d mismatch in Filter.dot_product");
     }
@@ -103,7 +82,7 @@ double FilterSubNode::dot_product(const SVF::FilterSubNode& val_f) const{
         throw std::runtime_error("Dimension-w mismatch in Filter.dot_product");
     }
 
-    //点积运算
+    /// dot
     for (unsigned i = 0; i < get_depth(); i++) {
         for (unsigned j = 0; j < get_height(); j++) {
             for (unsigned k = 0; k < get_width(); k++) {
@@ -114,10 +93,7 @@ double FilterSubNode::dot_product(const SVF::FilterSubNode& val_f) const{
     return sum;
 }
 
-//BasicOPNeuronNode 包括Sub, Mul, Div, Add
-BasicOPNeuronNode::BasicOPNeuronNode(SVF::NodeID id, const std::string op, const std::vector<Eigen::MatrixXd>& w, unsigned int in_w, unsigned int in_h, unsigned int in_d):
-      NeuronNode(id, BasicOPNode, in_w, in_h, in_d, in_w, in_h, in_d), constant{w}, oper{op}{};
-
+/// BasicOPNeuronNode:including Sub, Mul, Div, and Add.
 NeuronNode::NodeK BasicOPNeuronNode::get_type() const{
     if(oper == "Sub"){
         return Sub;
@@ -134,30 +110,31 @@ NeuronNode::NodeK BasicOPNeuronNode::get_type() const{
 std::vector<Eigen::MatrixXd> BasicOPNeuronNode::evaluate(const std::vector<Eigen::MatrixXd>& in_x) const{
     std::vector<Eigen::MatrixXd> result;
 
-    // 确保A和B有相同数量的通道
+    /// ensure A and B the number of depth equal
     if (in_x.size() != constant.size()) {
         std::cerr << "Error: The number of channels must be the same." << std::endl;
         return result;
     }
 
     for (size_t i = 0; i < in_x.size(); ++i) {
-        // 确保每个通道的尺寸正确
+        /// ensure the size of each channel correct
         if (constant[i].rows() != 1 || constant[i].cols() != 1) {
             std::cerr << "Error: B's channel matrices must be 1x1." << std::endl;
             return result;
         }
 
-        // 创建一个与A的通道相同尺寸的矩阵，其所有元素都是B的相应通道值
+        /// Create a matrix of the same size as the channel of A,
+        /// where all elements are the corresponding channel values of B
         Eigen::MatrixXd temp = Eigen::MatrixXd::Constant(in_x[i].rows(), in_x[i].cols(), constant[i](0,0));
 
-        // 将A的通道与上述矩阵相减
-        if(oper == "+"){
+        /// Subtract the channel of A from the above matrix
+        if(oper == "Add"){
             result.push_back(in_x[i] + temp);
-        }else if(oper == "-"){
+        }else if(oper == "Sub"){
             result.push_back(in_x[i] - temp);
-        }else if(oper == "*"){
+        }else if(oper == "Mul"){
             result.push_back(in_x[i].cwiseProduct(temp));
-        }else if(oper == "/"){
+        }else if(oper == "Div"){
             if (constant[i](0, 0) == 0) {
                 std::cerr << "Error: Division by zero." << std::endl;
                 assert(!(constant[i](0, 0) == 0));
@@ -165,14 +142,12 @@ std::vector<Eigen::MatrixXd> BasicOPNeuronNode::evaluate(const std::vector<Eigen
                 result.push_back(in_x[i].cwiseQuotient(temp));
             }
         }
-
     }
-
     return result;
 }
 
 std::vector<Eigen::MatrixXd> BasicOPNeuronNode::backpropagate(const std::vector<Eigen::MatrixXd>& x, const std::vector<Eigen::MatrixXd>& grad) const{
-    //扁平化操作,列向量
+    /// Flattening operation, column vector
     Eigen::VectorXd grad_x(out_height * out_width * out_depth);
     for (unsigned i = 0; i < out_depth; i++) {
         for (unsigned j = 0; j < out_height; j++) {
@@ -181,9 +156,9 @@ std::vector<Eigen::MatrixXd> BasicOPNeuronNode::backpropagate(const std::vector<
             }
         }
     }
-    //梯度，这里要根据情况修改 todo
+    /// Gradient, this needs to be modified according to the situation todo
     Eigen::VectorXd out_col = grad_x.transpose();
-    // 重构输出
+    /// Rebuild the output
     std::vector<Eigen::MatrixXd> out_grad;
     for (unsigned i = 0; i < in_depth; i++) {
         out_grad.push_back(Eigen::MatrixXd(out_height, out_width));
@@ -196,14 +171,7 @@ std::vector<Eigen::MatrixXd> BasicOPNeuronNode::backpropagate(const std::vector<
     return out_grad;
 }
 
-//maxpool
-MaxPoolNeuronNode::MaxPoolNeuronNode(SVF::NodeID id, unsigned int ww, unsigned int wh, unsigned int in_w, unsigned int in_h, unsigned int in_d):
-      NeuronNode(id, MaxPoolNode,in_w, in_h, in_d, in_w, in_h, in_d), window_width{ww}, window_height{wh}{
-    //计算窗口与输入tensor的关系
-    if (in_w % ww != 0 || in_h % wh != 0) {
-        throw std::runtime_error("Bad initialization of MaxPoolLayer");
-    }
-}
+/// Maxpooling
 
 NeuronNode::NodeK MaxPoolNeuronNode::get_type() const{
     return MaxPoolNode;
@@ -211,26 +179,35 @@ NeuronNode::NodeK MaxPoolNeuronNode::get_type() const{
 
 std::vector<Eigen::MatrixXd> MaxPoolNeuronNode::evaluate(const std::vector<Eigen::MatrixXd>& in_x) const{
     std::vector<Eigen::MatrixXd> out_x;
-    double doub_max = -std::numeric_limits<double>::max();
-    //chanel
-    for (unsigned i = 0; i < in_depth; i++) {
-        //tensor/window
-        out_x.push_back(Eigen::MatrixXd(in_height / window_height, in_width / window_width));
-        for (unsigned j = 0; j < in_height / window_height; j++) {
-            for (unsigned k = 0; k < in_width / window_width; k++) {
-                // 找出下限
-                double max = doub_max;
-                for (unsigned j_ = 0; j_ < window_height; j_++) {
-                    for (unsigned k_ = 0; k_ < window_width; k_++) {
-                        double current_val = in_x[i](window_height* j + j_, window_width* k + k_);
-                        if (current_val > max) {
-                            max = current_val;
+    for (size_t depth = 0; depth < in_x.size(); ++depth) {
+        /// Padding
+        unsigned padded_height = in_height + 2 * pad_height;
+        unsigned padded_width = in_width + 2 * pad_width;
+        Eigen::MatrixXd paddedMatrix = Eigen::MatrixXd::Zero(padded_height, padded_width);
+        paddedMatrix.block(pad_height, pad_width, in_height, in_width) = in_x[depth];
+
+        /// Calculate the size of the output feature map
+        unsigned outHeight = (padded_height - window_height) / stride_height + 1;
+        unsigned outWidth = (padded_width - window_width) / stride_width + 1;
+        Eigen::MatrixXd outMatrix(outHeight, outWidth);
+
+        for (unsigned i = 0; i < outHeight; ++i) {
+            for (unsigned j = 0; j < outWidth; ++j) {
+                double maxVal = -std::numeric_limits<double>::infinity();
+                for (unsigned m = 0; m < window_height; ++m) {
+                    for (unsigned n = 0; n < window_width; ++n) {
+                        unsigned rowIndex = i * stride_height + m;
+                        unsigned colIndex = j * stride_width + n;
+                        double currentVal = paddedMatrix(rowIndex, colIndex);
+                        if (currentVal > maxVal) {
+                            maxVal = currentVal;
                         }
                     }
                 }
-                out_x[i](j, k) = max;
+                outMatrix(i, j) = maxVal;
             }
         }
+        out_x.push_back(outMatrix);
     }
     return out_x;
 }
@@ -272,34 +249,14 @@ std::vector<Eigen::MatrixXd> MaxPoolNeuronNode::backpropagate(const std::vector<
     return x_grad;
 }
 
-// FullyCon全连接节点
-FullyConNeuronNode::FullyConNeuronNode(SVF::NodeID id, const Eigen::MatrixXd& w, const Eigen::VectorXd& b, unsigned int in_w, unsigned int in_h, unsigned int in_d):
-      NeuronNode(id, FullyConNode, in_w, in_h, in_d, 1, b.size(), 1), weight{w}, bias{b}{
-    if (w.rows() != b.size()) {
-        throw std::runtime_error("Bad initialization of FCLayer");
-    }
-}
-
-FullyConNeuronNode::FullyConNeuronNode(SVF::NodeID id, const Eigen::MatrixXd& w, const Eigen::VectorXd& b):
-      NeuronNode(id, FullyConNode, 1, w.cols(), 1, 1, b.size(), 1), weight{ w }, bias{ b }{
-    if (w.rows() != b.size()) {
-        throw std::runtime_error("Bad initialization of FCLayer");
-    }
-}
-
-FullyConNeuronNode::FullyConNeuronNode(SVF::NodeID id, const Eigen::MatrixXd& w, const Eigen::VectorXd& b, unsigned in_w, unsigned in_h, unsigned in_d, unsigned out_w, unsigned out_h, unsigned out_d):
-      NeuronNode(id, FullyConNode, in_w, in_h, in_d, out_w, out_h, out_d), weight{ w }, bias{ b } {
-    if (w.rows() != b.size()) {
-        throw std::runtime_error("Bad initialization of FCLayer");
-    }
-}
+/// FullyCon
 
 NeuronNode::NodeK FullyConNeuronNode::get_type() const{
     return FullyConNode;
 }
 
 std::vector<Eigen::MatrixXd> FullyConNeuronNode::evaluate(const std::vector<Eigen::MatrixXd>& in_x) const{
-    //处理输入扁平化操作 这一步相当于ONNX中的GEMM节点操作
+    /// The step of processing input flattening operation is equivalent to the GEMM node operation in ONNX
     Eigen::VectorXd x_ser(in_depth * in_height * in_width);
     for (unsigned i = 0; i < in_depth; i++) {
         for (unsigned j = 0; j < in_height; j++) {
@@ -309,13 +266,13 @@ std::vector<Eigen::MatrixXd> FullyConNeuronNode::evaluate(const std::vector<Eige
         }
     }
 
-    //wx+b
+    ///wx+b
     Eigen::VectorXd val = weight * x_ser + bias;
 
-    // 还原输出
+    /// Restore output
     std::vector<Eigen::MatrixXd> out;
 
-    // 赋值
+    /// Assignment
     for (unsigned i = 0; i < out_depth; i++) {
         out.push_back(Eigen::MatrixXd(out_height, out_width));
         for (unsigned j = 0; j < out_height; j++) {
@@ -328,7 +285,7 @@ std::vector<Eigen::MatrixXd> FullyConNeuronNode::evaluate(const std::vector<Eige
 }
 
 std::vector<Eigen::MatrixXd> FullyConNeuronNode::backpropagate(const std::vector<Eigen::MatrixXd>& x, const std::vector<Eigen::MatrixXd>& grad) const{
-    //扁平化操作,列向量
+    /// Flatten
     Eigen::VectorXd grad_x(out_height * out_width * out_depth);
     for (unsigned i = 0; i < out_depth; i++) {
         for (unsigned j = 0; j < out_height; j++) {
@@ -339,7 +296,7 @@ std::vector<Eigen::MatrixXd> FullyConNeuronNode::backpropagate(const std::vector
     }
 
     Eigen::VectorXd out_col = weight * grad_x.transpose();
-    // 重构输出
+    /// Rebuild the output
     std::vector<Eigen::MatrixXd> out_grad;
     for (unsigned i = 0; i < in_depth; i++) {
         out_grad.push_back(Eigen::MatrixXd(out_height, out_width));
@@ -352,62 +309,41 @@ std::vector<Eigen::MatrixXd> FullyConNeuronNode::backpropagate(const std::vector
     return out_grad;
 }
 
-ConvNeuronNode::ConvNeuronNode(SVF::NodeID id, const std::vector<FilterSubNode>& fil, const std::vector<double> b, unsigned int in_w, unsigned int in_h):
-      NeuronNode(id, ConstantNode, in_w, in_h, fil[0].get_depth(), in_w - fil[0].get_width() + 1, in_h - fil[0].get_height() + 1, fil.size()),
-      filter_depth{ fil[0].get_depth() }, filter_width{ fil[0].get_width() },filter_height{ fil[0].get_height() }, filter_num(fil.size()), filter(fil),
-      bias{b}{
-    // to do
-    unsigned ful_con_cols = in_depth * in_height * in_width;
-    unsigned ful_con_rows = out_depth * out_height * out_width;
-
-    // 构建一个
-    Eigen::MatrixXd ful_weight = Eigen::MatrixXd::Zero(ful_con_rows, ful_con_cols);
-
-    //偏置项
-    Eigen::VectorXd ful_con_bias(ful_con_rows);
-
-    for (unsigned i = 0; i < in_height - filter_height + 1; i++) {
-        for (unsigned j = 0; j < in_width - filter_width; j++) {
-            for (unsigned k = 0; k < filter_num; k++) {
-                unsigned row = (in_width - filter_width + 1) * filter_num * i + filter_num * j + k;
-                for (unsigned i_ = 0; i_ < filter_height; i_++) {
-                    for (unsigned j_ = 0; j_ < filter_width; j_++) {
-                        for (unsigned k_ = 0; k_ < filter_depth; k_++) {
-                            unsigned col = in_width * in_depth * (i + i_) + in_depth * (j + j_) + k_;
-                            ful_weight(row, col) = filter[k].value[k_](i_,j_);
-                        }
-                    }
-                }
-                ful_con_bias(row) = bias[k];
-            }
-        }
-    }
-    fullyer = FullyConNeuronNode(id, ful_weight, ful_con_bias, in_width, in_height, in_depth, out_width, out_height, out_depth);
-}
-
 NeuronNode::NodeK ConvNeuronNode::get_type() const{
     return ConvNode;
 }
 
 std::vector<Eigen::MatrixXd> ConvNeuronNode::evaluate(const std::vector<Eigen::MatrixXd>& x) const{
-    std::vector<Eigen::MatrixXd> out;
-    // tensor
-    for (unsigned i = 0; i < filter_num; i++) {
-        out.push_back(Eigen::MatrixXd(out_height, out_width));
-        for (unsigned j = 0; j < out_width; j++) {
-            for (unsigned k = 0; k < out_height; k++) {
-                // filter_window内的赋值
-                std::vector<Eigen::MatrixXd> win;
-                for (unsigned i_ = 0; i_ < filter_depth; i_++) {
-                    win.push_back(Eigen::MatrixXd(filter_height, filter_width));
-                    for (unsigned j_ = 0; j_ < filter_width; j_++) {
-                        for (unsigned k_ = 0; k_ < filter_height; k_++) {
-                            win[i_](k_, j_) = x[i_](k_ + k, j_ + j);
+    /// Padding
+    std::cout<<"fun"<<std::endl;
+    std::vector<Eigen::MatrixXd> padded_x(x.size());
+    for (size_t i = 0; i < x.size(); ++i) {
+        std::cout<<i<<std::endl;
+        padded_x[i] = Eigen::MatrixXd::Zero(x[i].rows() + 2*padding, x[i].cols() + 2*padding);
+        padded_x[i].block(padding, padding, x[i].rows(), x[i].cols()) = x[i];
+    }
+    std::cout<<"ks"<<std::endl;
+
+    /// Calculate the output feature map based on filling and step size
+    std::vector<Eigen::MatrixXd> out(filter_num, Eigen::MatrixXd(out_height, out_width));
+    for (int i = 0; i < filter_num; i++) {
+        for (int j = 0; j < out_width; j++) {
+            for (int k = 0; k < out_height; k++) {
+                double sum = 0;
+                for (int i_ = 0; i_ < filter_depth; i_++) {
+                    for (int j_ = 0; j_ < filter_height; j_++) {
+                        for (int k_ = 0; k_ < filter_width; k_++) {
+                            /// Strides
+                            int row = k * stride + j_;
+                            int col = j * stride + k_;
+                            if (row < padded_x[i_].rows() && col < padded_x[i_].cols()) {
+                                sum += filter[i].value[i_](j_, k_) * padded_x[i_](row, col);
+                            }
                         }
                     }
                 }
-                out[i](k, i) = filter[i].dot_product(win) + bias[k];
-
+                /// Calculate the output at the current position and add a bias
+                out[i](k, j) = sum + bias[i];
             }
         }
     }
@@ -418,15 +354,12 @@ std::vector<Eigen::MatrixXd> ConvNeuronNode::backpropagate(const std::vector<Eig
     return fullyer.backpropagate(in_x, grad);
 }
 
-ConstantNeuronNode::ConstantNeuronNode(SVF::NodeID id, unsigned in_w, unsigned in_h, unsigned in_d ):
-      NeuronNode(id, ConstantNode, in_w, in_h, in_d, in_w, in_h, in_d){}
-
 NeuronNode::NodeK ConstantNeuronNode::get_type() const{
     return ConstantNode;
 }
 
 std::vector<Eigen::MatrixXd> ConstantNeuronNode::evaluate(const std::vector<Eigen::MatrixXd>& x) const{
-    // This is an entry, nothing needs to do.
+    /// This is an entry, nothing needs to do.
     return x;
 }
 
@@ -448,7 +381,7 @@ std::vector<Eigen::MatrixXd> ConstantNeuronNode::backpropagate(const std::vector
     return x_grad;
 }
 
-// ques
+/// ques
 void NeuronNode::dump() const{
     SVFUtil::outs() << this->toString() << "\n";
 }
@@ -503,6 +436,12 @@ const std::string Direct2NeuronEdge::toString() const{
     return rawstr.str();
 }
 
+
+
+//NeuronNet::~NeuronNet()
+//{}
+
+
 NeuronEdge* NeuronNet::hasNeuronEdge(SVF::NeuronNode* src, SVF::NeuronNode* dst, NeuronEdge::NeuronEdgeK kind)
 {
     NeuronEdge edge(src, dst, kind);
@@ -532,6 +471,13 @@ NeuronEdge* NeuronNet::getNeuronEdge(const SVF::NeuronNode* src, const SVF::Neur
     return edge;
 }
 
+const std::string NeuronNode::toString() const{
+    std::string str;
+    std::stringstream rawstr(str);
+    rawstr << "NNNode" << getId();
+    return rawstr.str();
+}
+
 void NeuronNet::dump(const std::string& file, bool simple)
 {
     GraphPrinter::WriteGraphToFile(SVFUtil::outs(), file, this, simple);
@@ -549,7 +495,7 @@ void NeuronNet::view()
 //    typedef ICFGNode NodeType;
 //    DOTGraphTraits(bool isSimple = false) : DOTGraphTraits<SVFIR*>(isSimple) {}
 //
-//    // 返回图的名字
+//    /// Get the Graph's name
 //    static std::string getGraphName(NeuronNet*)
 //    {
 //        return "Neuronnet Graph";

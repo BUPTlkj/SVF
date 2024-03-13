@@ -1,16 +1,16 @@
 #ifndef SVF_NNGRAPH_H
 #define SVF_NNGRAPH_H
 
-#include "NNEdge.h"
-#include "NNNode.h"
-
-
+#include "1NNEdge.h"
+#include "1NNNode.h"
+#include <memory>
 
 /// using SVF namespace graph strcture
 namespace SVF {
 
 typedef GenericGraph<NeuronNode, NeuronEdge> GenericNeuronNetTy;
 class NeuronNet : public GenericNeuronNetTy {
+
 public:
     /// id to type
     typedef OrderedMap<NodeID, NeuronNode *> NeuronNetNodeID2NodeMapTy;
@@ -18,6 +18,7 @@ public:
     typedef NeuronNetNodeID2NodeMapTy::iterator iterator;
     typedef NeuronNetNodeID2NodeMapTy::const_iterator const_iterator;
 
+    /// Not Use currently
     NodeID totalNeuronNatNode;
 
 public:
@@ -49,7 +50,8 @@ public:
     /// View graph from the debugger
     void view();
 
-protected:
+//protected:
+public:
     /// Remove an NNEdge, maybe will be used later.
     /// Remove a NNNode, maybe will be used later.
 
@@ -71,10 +73,10 @@ protected:
         addGNode(node->getId(), node);
     }
 
-private:
+//private:
+public:
     /// Add ReLu Node
-    inline ReLuNeuronNode* addReLuNeuronNode( const unsigned in_w, const unsigned in_h, const unsigned in_d){
-        ReLuNeuronNode* sNode = new ReLuNeuronNode(totalNeuronNatNode++, in_w, in_h, in_d);
+    inline ReLuNeuronNode* addReLuNeuronNode(ReLuNeuronNode* sNode){
         //NodeID addedNodeID = totalNeuronNatNode;
         addNeuronNode(sNode);
         return sNode;
@@ -87,42 +89,96 @@ private:
 
 
     /// BasicOp layer
-    inline BasicOPNeuronNode* addBasicOPNeuronNode(const std::string op, const std::vector<Eigen::MatrixXd>& w, unsigned in_w, unsigned in_h, unsigned in_d){
-        BasicOPNeuronNode* sNode = new BasicOPNeuronNode(totalNeuronNatNode++, op, w, in_w, in_h, in_d);
+    inline BasicOPNeuronNode* addBasicOPNeuronNode(BasicOPNeuronNode* sNode){
         addNeuronNode(sNode);
         return sNode;
     }
 
     /// MaxPool layer
-    inline MaxPoolNeuronNode* addMaxPoolNeuronNode(NodeID id, unsigned ww, unsigned wh, unsigned sw, unsigned sh, unsigned pw, unsigned ph, unsigned in_w, unsigned in_h, unsigned in_d){
-        MaxPoolNeuronNode* sNode = new MaxPoolNeuronNode(totalNeuronNatNode++, ww, wh, sw, sh, pw, ph, in_w, in_h, in_d);
-
+    inline MaxPoolNeuronNode* addMaxPoolNeuronNode(MaxPoolNeuronNode* sNode){
         addNeuronNode(sNode);
         return sNode;
     }
 
     /// FullyCon layer
-    inline FullyConNeuronNode* addFullyConNeuronNode(const Eigen::MatrixXd& w, const Eigen::VectorXd& b, unsigned in_w, unsigned in_h, unsigned in_d){
-        FullyConNeuronNode* sNode = new FullyConNeuronNode(totalNeuronNatNode++, w, b, in_w, in_h, in_d);
+    inline FullyConNeuronNode* addFullyConNeuronNode(FullyConNeuronNode* sNode){
         addNeuronNode(sNode);
         return sNode;
     }
 
     /// ConvNeuronNode layer
-    inline ConvNeuronNode* addConvNeuronNode(const std::vector<FilterSubNode>& fil, const std::vector<double> b, unsigned in_w, unsigned in_h, unsigned pad, unsigned str){
-        ConvNeuronNode* sNode = new ConvNeuronNode(totalNeuronNatNode++, fil, b, in_w, in_h, pad, str);
+    inline ConvNeuronNode* addConvNeuronNode(ConvNeuronNode* sNode){
         addNeuronNode(sNode);
         return sNode;
     }
 
     /// Constant: Nothing to do OR Input layer
-    inline ConstantNeuronNode* addConstantNeuronNode(unsigned iw, unsigned ih, unsigned id){
-        ConstantNeuronNode* sNode = new ConstantNeuronNode(totalNeuronNatNode++, iw, ih, id);
+    inline ConstantNeuronNode* addConstantNeuronNode(ConstantNeuronNode* sNode){
         addNeuronNode(sNode);
         return sNode;
     }
 
+    /// Add NNEdge
+    static inline bool addDirected2NodeEdge(Direct2NeuronEdge* edge){
+        bool added1 = edge->getDstNode()->addIncomingEdge(edge);
+        bool added2 = edge->getSrcNode()->addOutgoingEdge(edge);
+        bool all_added = added1 && added2;
+        assert(all_added && "NeuronEdge not added?");
+        return all_added;
+    }
+
 };
+
+class GraphTraversal
+{
+public:
+    // Constructor
+    GraphTraversal(){};
+    // Destructor
+    ~GraphTraversal(){};
+
+
+    // By Node
+    bool checkNodeInVariant(const SVF::NeuronNode* current, const NeuronNodeVariant& dst);
+    void printPath(std::vector<const SVF::NeuronNode *> &path);
+    SVF::NeuronNode* getNeuronNodePtrFromVariant(const NeuronNodeVariant& variant);
+    SVF::NeuronNodeVariant convertToVariant(SVF::NeuronNode* node);
+//    void DFS(std::set<const SVF::NeuronNode *> &visited, std::vector<const SVF::NeuronNode *> &path, const SVF::NeuronNode *src, const SVF::NeuronNode *dst, std::vector<Eigen::MatrixXd> in_x);
+    void DFS(std::set<const SVF::NeuronNode *> &visited, std::vector<const SVF::NeuronNode *> &path, const SVF::NeuronNodeVariant *src, const SVF::NeuronNodeVariant *dst, std::vector<Eigen::MatrixXd> in_x);
+    // Retrieve all paths (a set of strings) during graph traversal
+    std::set<std::string>& getPaths(){
+        return paths;
+    }
+
+
+private:
+    std::set<std::string> paths;
+
+};
+
+class GraphTraversalE
+{
+public:
+    // Constructor
+    GraphTraversalE(){};
+    // Destructor
+    ~GraphTraversalE(){};
+
+    std::set<std::string>& getPaths(){
+        return paths;
+    }
+
+    //    By edge
+    void printPathE(std::vector<const SVF::Direct2NeuronEdge *> &path);
+    void DFSE(const SVF::Direct2NeuronEdge *src_edge, const SVF::NeuronNodeVariant *dst, std::vector<Eigen::MatrixXd> in_x);
+
+private:
+    std::set<std::string> paths;
+    std::set<const SVF::NeuronNodeVariant *> visited;
+    std::vector<const SVF::Direct2NeuronEdge *> path;
+
+};
+
 
 } // End namespace SVF
 
@@ -146,8 +202,6 @@ template<> struct GenericGraphTraits<SVF::NeuronNet*> : public GenericGraphTrait
 {
     typedef SVF::NeuronNode *NodeRef;
 };
-
-
 
 } // End namespace SVF
 

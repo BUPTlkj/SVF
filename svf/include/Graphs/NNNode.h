@@ -1,7 +1,3 @@
-//
-// Created by Kaijie Liu on 2024/2/9.
-//
-
 #ifndef SVF_NNNODE_H
 #define SVF_NNNODE_H
 
@@ -12,11 +8,20 @@
 
 namespace SVF{
 
+class NeuronNode;
+class ReLuNeuronNode;
+class BasicOPNeuronNode;
+class MaxPoolNeuronNode;
+class FullyConNeuronNode;
+class ConvNeuronNode;
+class ConstantNeuronNode;
+
+
 typedef GenericNode<NeuronNode, NeuronEdge> GenericNeuronNodeTy;
 class NeuronNode: public GenericNeuronNodeTy{
 
 public:
-    // 点的种类, ReLu, Add Sub Mul Div, Maxpooling(Flatten), Conv, FullyCon, Constant
+    /// ReLu, Add Sub Mul Div, Maxpooling(Flatten), Conv, FullyCon, Constant
     enum NodeK{
         ReLuNode,
         BasicOPNode,
@@ -36,27 +41,30 @@ public:
     typedef std::list<const NeuronEdge*> NeuronEdgeList;
 
 public:
-    // 构造函数
-    // 后续需要看是否还要添加其他
+    /// Constructor
+    /// Depends
     NeuronNode(NodeID i, NodeK k, unsigned iw, unsigned ih, unsigned id, unsigned ow, unsigned oh, unsigned od):
           GenericNeuronNodeTy(i, k),
           in_width{ iw }, in_height{ ih }, in_depth{ id }, out_width{ ow },
           out_height{ oh }, out_depth{ od }{
+        NeuronEdges = NeuronEdgeList();
+        NeuronNodes = NeuronNodeList();
+
     }
 
-    //重构<<存储图的点的ID
+    /// Rebuild << store NodeID in NNgraph
     friend OutStream &operator<<(OutStream &o, const NeuronNode &node)
     {
         o << node.toString();
         return o;
     }
 
-    //添加点的方法
+    /// Add a node
     inline void addNeoronNode(const NeuronNode *nnNode){
         NeuronNodes.push_back(nnNode);
     }
 
-    //获得所有点
+    /// Get all nodes
     inline const NeuronNodeList& getNeuronNodes() const{
         return NeuronNodes;
     }
@@ -94,10 +102,10 @@ public:
         return out_depth;
     }
 
-    // 获得层的类型
+    /// Get layer‘s type(node)
     virtual NodeK get_type() const = 0;
 
-    // 正向传播
+    /// Forward propagation
     virtual std::vector<Eigen::MatrixXd> evaluate(
         const std::vector<Eigen::MatrixXd>& x) const = 0;
 
@@ -110,7 +118,7 @@ protected:
     NeuronEdgeList NeuronEdges;
     NeuronNodeList NeuronNodes;
 
-    //节点信息
+    /// Node Info
 protected:
     unsigned in_width;
     unsigned in_height;
@@ -124,7 +132,16 @@ protected:
 class FilterSubNode{
 public:
     std::vector<Eigen::MatrixXd> value;
-    FilterSubNode(const std::vector<Eigen::MatrixXd>& x);
+    FilterSubNode(const std::vector<Eigen::MatrixXd>& x){
+        for (unsigned i = 0; i < x.size(); i++) {
+            for (unsigned j = 0; j < x.size(); j++) {
+                if (x[i].rows() != x[j].rows() || x[i].cols() != x[j].cols()) {
+                    throw std::runtime_error("Bad construction of Filter");
+                }
+            }
+        }
+        value = x;
+    }
 
     unsigned get_depth() const;
     unsigned get_height() const;
@@ -137,8 +154,9 @@ public:
 class ReLuNeuronNode:public NeuronNode{
 
 public:
-    // 构建一个ReLu节点
-    ReLuNeuronNode(NodeID id, unsigned in_w, unsigned in_h, unsigned in_d);
+    /// Build ReLu Node
+    ReLuNeuronNode(NodeID id, unsigned in_w, unsigned in_h, unsigned in_d):
+          NeuronNode(id, ReLuNode, in_w, in_h, in_d, in_w, in_h, in_d){}
 
     static inline bool classof(const ReLuNeuronNode *)
     {
@@ -167,7 +185,6 @@ public:
 
     const std::string toString() const override;
 
-
 };
 
 class BasicOPNeuronNode:public NeuronNode{
@@ -175,8 +192,9 @@ public:
     std::vector<Eigen::MatrixXd> constant;
     std::string oper;
 
-    // 构建一个Add/Sub/Mul/Div节点
-    BasicOPNeuronNode(NodeID id, const std::string op, const std::vector<Eigen::MatrixXd>& w, unsigned in_w, unsigned in_h, unsigned in_d);
+    /// Build Add/Sub/Mul/Div node
+    BasicOPNeuronNode(NodeID id, const std::string op, const std::vector<Eigen::MatrixXd>& w, unsigned in_w, unsigned in_h, unsigned in_d):
+          NeuronNode(id, BasicOPNode, in_w, in_h, in_d, in_w, in_h, in_d), constant{w}, oper{op}{};
 
     static inline bool classof(const BasicOPNeuronNode *)
     {
@@ -208,12 +226,25 @@ public:
 
 class MaxPoolNeuronNode:public NeuronNode{
 public:
-    // 定义窗口的size
+    /// Define the windows size
     unsigned window_width;
     unsigned window_height;
+    unsigned stride_width;
+    unsigned stride_height;
+    unsigned pad_width;
+    unsigned pad_height;
 
-    // 构建一个最大池化节点
-    MaxPoolNeuronNode(NodeID id, unsigned ww, unsigned wh, unsigned in_w, unsigned in_h, unsigned in_d);
+    /// Bulid a maxpooling node
+    MaxPoolNeuronNode(NodeID id, unsigned ww, unsigned wh, unsigned sw, unsigned sh, unsigned pw, unsigned ph, unsigned in_w, unsigned in_h, unsigned in_d):
+          NeuronNode(id, MaxPoolNode,in_w, in_h, in_d, in_w, in_h, in_d), window_width{ww}, window_height{wh},
+          stride_width(sw), stride_height(sh),
+          pad_width(pw), pad_height(ph){
+        /// Calculate the relations between windows and input tensor
+        if (((in_w + 2*pw - ww) % sw != 0) || ((in_h + 2*ph - wh) % sh != 0)) {
+            throw std::runtime_error("Input dimensions and strides do not match");
+        }
+    }
+
 
     static inline bool classof(const MaxPoolNeuronNode *)
     {
@@ -250,15 +281,32 @@ public:
     Eigen::MatrixXd weight;
     Eigen::VectorXd bias;
 //    FullyConNeuronNode(NodeID id);
-    // 常见
-    FullyConNeuronNode(NodeID id, const Eigen::MatrixXd& w, const Eigen::VectorXd& b, unsigned in_w, unsigned in_h, unsigned in_d);
-    // 以下两个是为了卷积的操作
-    FullyConNeuronNode();
+    /// the most common
+    FullyConNeuronNode(NodeID id, const Eigen::MatrixXd& w, const Eigen::VectorXd& b, unsigned in_w, unsigned in_h, unsigned in_d):
+          NeuronNode(id, FullyConNode, in_w, in_h, in_d, 1, b.size(), 1), weight{w}, bias{b}{
+        if (w.rows() != b.size()) {
+            throw std::runtime_error("Bad initialization of FCLayer");
+        }
+    }
+    /// For Conv's filter op
+    FullyConNeuronNode(): NeuronNode(-1,FullyConNode, 0,0,0,0,0,0){};
 //    FullyConNeuronNode(const Eigen::MatrixXd& w, const Eigen::VectorXd& b, unsigned in_w, unsigned in_h, unsigned in_d);
-    FullyConNeuronNode(NodeID id, const Eigen::MatrixXd& w, const Eigen::VectorXd& b);
-    FullyConNeuronNode(NodeID id, const Eigen::MatrixXd& w, const Eigen::VectorXd& b, unsigned in_w, unsigned in_h, unsigned in_d, unsigned out_w, unsigned out_h, unsigned out_d);
+    FullyConNeuronNode(NodeID id, const Eigen::MatrixXd& w, const Eigen::VectorXd& b):
+          NeuronNode(id, FullyConNode, 1, w.cols(), 1, 1, b.size(), 1), weight{ w }, bias{ b }{
+        if (w.rows() != b.size()) {
+            throw std::runtime_error("Bad initialization of FCLayer");
+        }
+    }
 
-    static inline bool classof(const MaxPoolNeuronNode *)
+    FullyConNeuronNode(NodeID id, const Eigen::MatrixXd& w, const Eigen::VectorXd& b, unsigned in_w, unsigned in_h, unsigned in_d, unsigned out_w, unsigned out_h, unsigned out_d):
+          NeuronNode(id, FullyConNode, in_w, in_h, in_d, out_w, out_h, out_d), weight{ w }, bias{ b } {
+        if (w.rows() != b.size()) {
+            throw std::runtime_error("Bad initialization of FCLayer");
+        }
+    }
+
+
+    static inline bool classof(const FullyConNeuronNode *)
     {
         return true;
     }
@@ -290,25 +338,65 @@ public:
 
 class ConvNeuronNode:public NeuronNode{
 public:
-    //filter的维度
+    /// filter
     unsigned filter_depth;
     unsigned filter_width;
     unsigned filter_height;
 
-    //filter的个数
+    /// filter_num
     unsigned filter_num;
 
-    // filter
+    /// filter
     std::vector<FilterSubNode> filter;
 
-    // 偏置项
+    /// bias
     std::vector<double> bias;
 
     FullyConNeuronNode fullyer;
 
-    ConvNeuronNode(NodeID id, const std::vector<FilterSubNode>& fil, const std::vector<double> b, unsigned in_w, unsigned in_h);
+    unsigned padding;
+    unsigned stride;
+    // u32t
+    // s32t
 
-    static inline bool classof(const MaxPoolNeuronNode *)
+    ConvNeuronNode(NodeID id, const std::vector<FilterSubNode>& fil, const std::vector<double> b, unsigned in_w, unsigned in_h, unsigned pad, unsigned str):
+          NeuronNode(id, ConstantNode, in_w, in_h, fil[0].get_depth(),
+                     ((in_w - fil[0].get_width() + 2*pad) / str) + 1,
+                     ((in_h - fil[0].get_height() + 2*pad) / str) + 1,
+                     fil.size()),
+          filter_depth{ fil[0].get_depth() }, filter_width{ fil[0].get_width() },filter_height{ fil[0].get_height() }, filter_num(fil.size()), filter(fil),
+          bias{b}, padding(pad), stride(str){
+        /// to do
+        unsigned ful_con_cols = in_depth * in_height * in_width;
+        unsigned ful_con_rows = out_depth * out_height * out_width;
+
+        /// Build
+        Eigen::MatrixXd ful_weight = Eigen::MatrixXd::Zero(ful_con_rows, ful_con_cols);
+
+        /// bias
+        Eigen::VectorXd ful_con_bias(ful_con_rows);
+
+        for (unsigned i = 0; i < in_height - filter_height + 1; i++) {
+            for (unsigned j = 0; j < in_width - filter_width; j++) {
+                for (unsigned k = 0; k < filter_num; k++) {
+                    unsigned row = (in_width - filter_width + 1) * filter_num * i + filter_num * j + k;
+                    for (unsigned i_ = 0; i_ < filter_height; i_++) {
+                        for (unsigned j_ = 0; j_ < filter_width; j_++) {
+                            for (unsigned k_ = 0; k_ < filter_depth; k_++) {
+                                unsigned col = in_width * in_depth * (i + i_) + in_depth * (j + j_) + k_;
+                                ful_weight(row, col) = filter[k].value[k_](i_,j_);
+                            }
+                        }
+                    }
+                    ful_con_bias(row) = bias[k];
+                }
+            }
+        }
+        fullyer = FullyConNeuronNode(id, ful_weight, ful_con_bias, in_width, in_height, in_depth, out_width, out_height, out_depth);
+    }
+
+
+    static inline bool classof(const ConvNeuronNode *)
     {
         return true;
     }
@@ -337,13 +425,14 @@ public:
 };
 
 
-// ONNX 中这个节点不需要做操作
+/// ConstantNeuronNode: Nothing needs to be done, just propagates the input without op.
 class ConstantNeuronNode:public NeuronNode{
 
 public:
-    ConstantNeuronNode(NodeID id, unsigned in_w, unsigned in_h, unsigned in_d);
+    ConstantNeuronNode(NodeID id, unsigned in_w, unsigned in_h, unsigned in_d):
+          NeuronNode(id, ConstantNode, in_w, in_h, in_d, in_w, in_h, in_d){}
 
-    static inline bool classof(const ReLuNeuronNode *)
+    static inline bool classof(const ConstantNeuronNode *)
     {
         return true;
     }

@@ -1,8 +1,10 @@
 # Define the core library
-add_library(SvfCore)
+add_library(SvfCore
+        include/Graphs/1NNEdge.h
+        include/Graphs/1NNGraph.h
+        include/Graphs/1NNNode.h
+        lib/Graphs/1NNGraph.cpp)
 
-set(EIGEN_HOME ${CMAKE_SOURCE_DIR}/ext_include)
-include_directories(${EIGEN_HOME})
 
 # Add the public headers as an include directory
 target_include_directories(SvfCore
@@ -40,3 +42,5 @@ install(
   ARCHIVE DESTINATION ${SVF_INSTALL_LIB_DIR}
   FILE_SET HEADERS DESTINATION ${SVF_INSTALL_INCLUDE_DIR}
 )
+
+
