@@ -73,11 +73,9 @@ public:
         addGNode(node->getId(), node);
     }
 
-//private:
 public:
     /// Add ReLu Node
     inline ReLuNeuronNode* addReLuNeuronNode(ReLuNeuronNode* sNode){
-        //NodeID addedNodeID = totalNeuronNatNode;
         addNeuronNode(sNode);
         return sNode;
     }
@@ -132,20 +130,19 @@ public:
 class GraphTraversal
 {
 public:
-    // Constructor
+    /// Constructor
     GraphTraversal(){};
-    // Destructor
+    /// Destructor
     ~GraphTraversal(){};
 
 
-    // By Node
+    /// By Node
     bool checkNodeInVariant(const SVF::NeuronNode* current, const NeuronNodeVariant& dst);
     void printPath(std::vector<const SVF::NeuronNode *> &path);
     SVF::NeuronNode* getNeuronNodePtrFromVariant(const NeuronNodeVariant& variant);
     SVF::NeuronNodeVariant convertToVariant(SVF::NeuronNode* node);
-//    void DFS(std::set<const SVF::NeuronNode *> &visited, std::vector<const SVF::NeuronNode *> &path, const SVF::NeuronNode *src, const SVF::NeuronNode *dst, std::vector<Eigen::MatrixXd> in_x);
     void DFS(std::set<const SVF::NeuronNode *> &visited, std::vector<const SVF::NeuronNode *> &path, const SVF::NeuronNodeVariant *src, const SVF::NeuronNodeVariant *dst, std::vector<Eigen::MatrixXd> in_x);
-    // Retrieve all paths (a set of strings) during graph traversal
+    /// Retrieve all paths (a set of strings) during graph traversal
     std::set<std::string>& getPaths(){
         return paths;
     }
@@ -156,31 +153,8 @@ private:
 
 };
 
-class GraphTraversalE
-{
-public:
-    // Constructor
-    GraphTraversalE(){};
-    // Destructor
-    ~GraphTraversalE(){};
 
-    std::set<std::string>& getPaths(){
-        return paths;
-    }
-
-    //    By edge
-    void printPathE(std::vector<const SVF::Direct2NeuronEdge *> &path);
-    void DFSE(const SVF::Direct2NeuronEdge *src_edge, const SVF::NeuronNodeVariant *dst, std::vector<Eigen::MatrixXd> in_x);
-
-private:
-    std::set<std::string> paths;
-    std::set<const SVF::NeuronNodeVariant *> visited;
-    std::vector<const SVF::Direct2NeuronEdge *> path;
-
-};
-
-
-} // End namespace SVF
+} /// End namespace SVF
 
 
 namespace SVF{

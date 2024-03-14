@@ -54,7 +54,7 @@ public:
 
 };
 
-// Edge Direct2Neuron
+/// Edge Direct2Neuron
 class Direct2NeuronEdge:public NeuronEdge{
 
 public:

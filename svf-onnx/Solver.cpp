@@ -1,12 +1,5 @@
 #include "Solver.h"
 
-//// FOR Test
-void TraverseVectorOfMatrices(const std::vector<Eigen::MatrixXd>& in_x) {
-    for (const auto& matrix : in_x) {
-        std::cout << "Matrix size: " << matrix.rows() << "x" << matrix.cols() << std::endl;
-        std::cout << "Matrix content:\n" << matrix << std::endl << std::endl;
-    }
-}
 
 std::vector<Eigen::MatrixXd> SolverEvaluate::ReLuNeuronNodeevaluate() const{
     std::cout<<"Reluing....."<<std::endl;
@@ -24,16 +17,12 @@ std::vector<Eigen::MatrixXd> SolverEvaluate::ReLuNeuronNodeevaluate() const{
         /// Channel
         x_out.push_back(o);
     }
-    std::cout<<"***************"<<std::endl;
-    std::cout<<in_x[0].cols()<<"   "<<in_x[0].rows()<<std::endl;
-    std::cout<<x_out[0].cols()<<"   "<<x_out[0].rows()<<std::endl;
     return x_out;
 }
 
 std::vector<Eigen::MatrixXd> SolverEvaluate::BasicOPNeuronNodeevaluate( const SVF::BasicOPNeuronNode *basic) const{
     std::cout<<"BasicNoding......"<<std::endl;
-//    TraverseVectorOfMatrices(in_x);
-//    TraverseVectorOfMatrices(basic->constant);
+
 
     std::vector<Eigen::MatrixXd> result;
 
@@ -73,7 +62,6 @@ std::vector<Eigen::MatrixXd> SolverEvaluate::BasicOPNeuronNodeevaluate( const SV
             }
         }
     }
-//    TraverseVectorOfMatrices(result);
     return result;
 }
 
@@ -130,7 +118,7 @@ std::vector<Eigen::MatrixXd> SolverEvaluate::FullyConNeuronNodeevaluate( const S
     auto in_width = in_x[0].cols();
     auto weight = fully->weight;
     auto bias = fully->bias;
-//       1, b.size(), 1
+///       1, b.size(), 1
     unsigned out_width = 1;
     unsigned out_height = bias.size();
     unsigned out_depth = 1;
@@ -175,11 +163,6 @@ std::vector<Eigen::MatrixXd> SolverEvaluate::ConvNeuronNodeevaluate( const SVF::
     auto bias = conv->get_bias();
     auto out_height = ((in_x[0].rows() - filter[0].get_height() + 2*padding) / stride) + 1;
     auto out_width = ((in_x[0].cols() - filter[0].get_width() + 2*padding) / stride) + 1;
-
-    std::cout<<"IMPORT FILTER NUMBER: "<<filter_num<<"  "<<out_height<<"   "<<out_width<<std::endl;
-    std::cout<<"FILTER NUMBER: "<<filter[0].get_height()<<"  "<<filter[0].get_width()<<"   "<<std::endl;
-    std::cout<<"FILTER NUMBER: "<<filter_height<<"  "<<filter_width<<"   "<<std::endl;
-    std::cout<<"MATRIX NUMBER: "<<in_x[0].rows()<<"  "<<in_x[0].cols()<<"   "<<std::endl;
 
     /// Padding
     std::vector<Eigen::MatrixXd> padded_x(in_x.size());

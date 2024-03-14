@@ -9,36 +9,48 @@
 #include <sstream>
 
 
-namespace SVF{
+namespace SVF
+{
 
-
-/// ±êÇ©
+/// Label
 typedef std::vector<signed> LabelVector;
-/// Í¼ÏñµÄÏñËØ¾ØÕó
-typedef std::vector<Eigen::MatrixXd> MatrixVector;
+
+/// Image pixel matrix
 typedef std::vector<std::vector<Eigen::MatrixXd>> MatrixVector_3c;
 
-class LoadData{
+/// Upper & lower Bound
+struct LabelAndBounds
+{
+    signed label;
+    std::vector<Eigen::MatrixXd> matrix_lb;
+    std::vector<Eigen::MatrixXd> matrix_ub;
+};
+
+class LoadData
+{
 public:
     std::string dataset;
 
 public:
-    LoadData(std::string name): dataset{name}{
-        if(dataset == "mnist" or dataset == "cifar"){
-            std::cout<<"Loading "<<dataset<<" ......"<<std::endl;
-        }else{
-            throw std::runtime_error("UNSUPPORT DATASET, ONLY SUPPORT MNIST AND CIFAR 10");
+    LoadData(std::string name) : dataset{name}
+    {
+        if (dataset == "mnist" or dataset == "cifar")
+        {
+            std::cout << "Loading " << dataset << " ......" << std::endl;
+        }
+        else
+        {
+            throw std::runtime_error(
+                "UNSUPPORT DATASET, ONLY SUPPORT MNIST AND CIFAR 10");
         }
     }
 
     std::pair<LabelVector, MatrixVector_3c> read_dataset();
 
-
-
-
+    /// Perturbation function
+    std::vector<LabelAndBounds> perturbateImages( const std::pair<LabelVector, MatrixVector_3c>& labelImagePairs, double eps);
 
 };
-
 }
 
 

@@ -101,6 +101,7 @@ SVFNN::SVFNN(std::string adress): onnxAdress{adress}{
                     /// Refer to GEMM
                     ConvParams conf = ConvparseAndFormat(nodeDataParts[2]);
                     /// filter: filters,tmr todo dims
+                    std::cout<<"**********"<<conf.filterDims<<std::endl<<conf.filterValue<<std::endl;
                     convnode.filter = parse_filters(conf.filterValue, parseDimensions(conf.filterDims)[0], parseDimensions(conf.filterDims)[1], parseDimensions(conf.filterDims)[2], parseDimensions(conf.filterDims)[3] );
                     convnode.conbias = parse_Convbiasvector(conf.biasValue);
                     convnode.name = name;
@@ -539,7 +540,7 @@ std::vector<double> SVFNN::parse_Convbiasvector(std::string s) {
 
 
 /// NNGraph Bulid
-class InfoExtractor {
+class NNGraphBuilder {
 private:
     /// init nodes
     std::unordered_map<std::string, SVF::ConstantNeuronNode*> ConstantNodeIns;
@@ -588,7 +589,6 @@ public:
 
     void operator()(const BasicNodeInfo& node)  {
         auto id = getNodeID(node.name);
-        std::cout<<node.name<<node.values.size()<<std::endl;
         OrderedNodeName.push_back(node.name);
         BasicOPNodeIns[node.name] = new SVF::BasicOPNeuronNode(id, node.typestr, node.values);
         g->addBasicOPNeuronNode(BasicOPNodeIns[node.name]);
@@ -606,6 +606,16 @@ public:
         OrderedNodeName.push_back(node.name);
         ConvNodeIns[node.name] = new SVF::ConvNeuronNode(id, node.filter, node.conbias, node.pads.first, node.strides.first);
         g->addConvNeuronNode(ConvNodeIns[node.name]);
+
+        for(size_t ip = 0; ip < node.filter.size(); ++ip) {
+            /// Using filter[i]
+            const SVF::FilterSubNode &subNode = node.filter[ip];
+            for(size_t ipp = 0; ipp < subNode.value.size(); ipp++){
+                std::cout<<"Filter: "<<ip<<" - Matrix: "<<ipp<<std::endl;
+                std::cout<<subNode.value[ipp]<<std::endl;
+            }
+        }
+
     }
 
     void operator()(const ReluNodeInfo& node) {
@@ -653,7 +663,6 @@ public:
             const auto& currentName = OrderedNodeName[i];
             const auto& nextName = OrderedNodeName[i + 1];
 
-            /// Different type Nodeclass? todo
             SVF::NeuronNode* currentNode = getNodeInstanceByName1(currentName);
             SVF::NeuronNode* nextNode = getNodeInstanceByName1(nextName);
 
@@ -671,13 +680,14 @@ public:
     }
 
     void Traversal(std::vector<Eigen::MatrixXd>& in_x) {
+
+        /// Print the dataset matrix
         for(int j=0; j<in_x.size();j++){
             std::cout<<"Matrix: "<<j<<std::endl;
             std::cout<<in_x[j]<<std::endl;
         }
-        SVF::NodeID id = 5;
-        std::cout<<"NNGraph: NodeID 5: "<<g->hasNeuronNetNode(id)<<std::endl;
-        // 注意：现在visited和path存储的是指向SVF::NeuronNodeVariant的指针
+
+        /// Note: Currently, visited and path store pointers to SVF:: NeuronNodeVariant
         std::set<const SVF::NeuronNode *> visited;
         std::vector<const SVF::NeuronNode *> path;
         auto *dfs = new SVF::GraphTraversal();
@@ -686,11 +696,11 @@ public:
         const auto& LastName = OrderedNodeName[OrderedNodeName.size() - 1];
         const auto& FirstName = OrderedNodeName[0];
 
-        // getNodeInstanceByName现在返回SVF::NeuronNodeVariant
-        auto FirstNode = getNodeInstanceByName(FirstName); // 应返回SVF::NeuronNodeVariant
-        auto LastNode = getNodeInstanceByName(LastName); // 应返回SVF::NeuronNodeVariant
+        /// getNodeInstanceByName() return type: SVF::NeuronNodeVariant
+        auto FirstNode = getNodeInstanceByName(FirstName); /// Return SVF::NeuronNodeVariant
+        auto LastNode = getNodeInstanceByName(LastName); /// Return SVF::NeuronNodeVariant
 
-        // 由于DFS现在接受SVF::NeuronNodeVariant类型的参数，直接传递FirstNode和LastNode的地址
+        /// Due to DFS now accepting parameters: SVF:: NeuronNodeVariant type, directly passing the addresses of FirstNode and LastNode
         dfs->DFS(visited, path, &FirstNode, &LastNode, in_x);
         auto stringPath = dfs->getPaths();
         std::cout<<"GET PATH"<<stringPath.size()<<std::endl;
@@ -699,11 +709,9 @@ public:
             std::cout << i <<"*****"<< paths << std::endl;
             i++;
         }
-        std::cout << "Test case ONNX passed!\n";
 
-        delete dfs; // 删除分配的内存
+        delete dfs; /// Delete allocated memory
     }
-
 };
 
 
@@ -712,32 +720,33 @@ int main(){
 //    std::string address = "/Users/liukaijie/Desktop/operation-py/convSmallRELU__Point.onnx";
 //    std::string address = "/Users/liukaijie/Desktop/operation-py/mnist_conv_maxpool.onnx";
     std::string address = "/Users/liukaijie/Desktop/operation-py/ffnnRELU__Point_6_500.onnx";
+
+    /// parse onnx into svf-onnx
     SVFNN svfnn(address);
     auto nodes = svfnn.get_nodes();
-    std::cout<<nodes.size()<<std::endl;
-    InfoExtractor info;
+
+    /// Init nn-graph builder
+    NNGraphBuilder nngraph;
+
     /// Init & Add node
     for (const auto& node : nodes) {
-        std::visit(info, node);
+        std::visit(nngraph, node);
     }
-    /// Init & Add Edge
-    info.AddEdges();
-//    auto dataset = read_dataset("cifar");
 
+    /// Init & Add Edge
+    nngraph.AddEdges();
+
+    /// Load dataset: mnist or cifa-10
 //    SVF::LoadData dataset("cifar");
     SVF::LoadData dataset("mnist");
     auto x = dataset.read_dataset();
     std::cout<<"Label: "<<x.first.front()<<std::endl;
 
-//    SolverEvaluate solver(x.second.front());
+    double perti = 0.001;
+    auto per_x = dataset.perturbateImages(x, perti);
 
-//    auto ini = x.second.front()[0];
-    info.Traversal(x.second.front());
+    /// Run abstract interpretation on NNgraph
+    nngraph.Traversal(x.second.front());
 
     return 0;
 }
-/*
- * todo
- * 后续要么通过InfoExtractor进行图的结合
- * 要么通过构造函数直接实现图的结合
- */

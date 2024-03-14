@@ -233,7 +233,7 @@ class FullyConNeuronNode:public NeuronNode{
 public:
     Eigen::MatrixXd weight;
     Eigen::VectorXd bias;
-//    FullyConNeuronNode(NodeID id);
+
     /// the most common
     FullyConNeuronNode(NodeID id, const Eigen::MatrixXd& w, const Eigen::VectorXd& b):
           NeuronNode(id, FullyConNode), weight{w}, bias{b}{

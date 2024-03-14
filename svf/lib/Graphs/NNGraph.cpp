@@ -129,39 +129,6 @@ NeuronNode::NodeK ConvNeuronNode::get_type() const{
     return ConvNode;
 }
 
-//unsigned int ConvNeuronNode::get_filter_depth() const{
-//    return filter_depth;
-//}
-
-
-//unsigned int ConvNeuronNode::get_filter_width() const{
-//    return filter_width;
-//}
-//
-//unsigned int ConvNeuronNode::get_filter_height() const{
-//    return filter_height;
-//}
-//
-//unsigned int ConvNeuronNode::get_filter_num() const{
-//    return filter_num;
-//}
-//
-//std::vector<FilterSubNode> ConvNeuronNode::get_filter() const{
-//    return filter;
-//}
-//
-//std::vector<double> ConvNeuronNode::get_bias() const{
-//    return bias;
-//}
-//
-//unsigned int ConvNeuronNode::get_padding() const{
-//    return padding;
-//}
-//
-//unsigned int ConvNeuronNode::get_stride() const{
-//    return stride;
-//}
-
 /// Constant
 NeuronNode::NodeK ConstantNeuronNode::get_type() const{
     return ConstantNode;
@@ -368,62 +335,21 @@ template <> struct DOTGraphTraits<NeuronNet*> : public DOTGraphTraits<SVFIR*>
 };
 }
 
-/// By Edge odo
-void GraphTraversalE::printPathE(std::vector<const SVF::Direct2NeuronEdge *> &path1){
-    std::string pathStr = "START: ";
-    pathStr += std::to_string(path1.front()->getDstNode()->getId()) + "->";
-    for (size_t i = 1; i < path1.size(); ++i) // Started from the first not zero.
-    {
-        pathStr += std::to_string(path1[i]->getDstNode()->getId()) + "->";
-    }
-    pathStr += "END";
-    paths.insert(pathStr);
-    std::cout << pathStr << std::endl;
 
-}
-
-
-
-void GraphTraversalE::DFSE(const SVF::Direct2NeuronEdge *src_edge, const SVF::NeuronNodeVariant *dst, std::vector<Eigen::MatrixXd> in_x){
-
-
-//     Mark the source node as visited
-//    auto *src = src_edge->getSrcNode();
-
-
-
-}
-
-
-
-
-
-/// BY NODE todo
-
+/// BY NODE
 void GraphTraversal::printPath(std::vector<const SVF::NeuronNode *> &path){
     std::string output = "START: ";
     for (size_t i = 0; i < path.size(); ++i) {
         output += std::to_string(path[i]->getId());
-        //            output += std::to_string(path[i]->getNodeID());
         if (i < path.size() - 1) {
             output += "->";
         }
     }
-//    for (const auto& nodeVariant : path) {
-//        std::visit([&output](auto&& arg) {
-//            using T = std::decay_t<decltype(arg)>;
-//            if constexpr (!std::is_same_v<T, std::monostate>) {
-//                output += std::to_string(arg->getId());
-//            }
-//        }, *nodeVariant);
-//        output += "->";
-//    }
-//    output += "->END";
     paths.insert(output);
 };
 
 SVF::NeuronNodeVariant GraphTraversal::convertToVariant(SVF::NeuronNode* node) {
-    // 检查node的具体类型并相应地构造NeuronNodeVariant
+    /// Check the specific type of node and construct NeuronNodeVariant accordingly
     if (auto* constantNode = SVFUtil::dyn_cast<SVF::ConstantNeuronNode>(node)) {
         return constantNode;
     } else if (auto* basicOPNode = SVFUtil::dyn_cast<SVF::BasicOPNeuronNode>(node)) {
@@ -437,60 +363,10 @@ SVF::NeuronNodeVariant GraphTraversal::convertToVariant(SVF::NeuronNode* node) {
     } else if (auto* maxPoolNode = SVFUtil::dyn_cast<SVF::MaxPoolNeuronNode>(node)) {
         return maxPoolNode;
     }
-    // 如果node不匹配任何已知类型，可以返回std::monostate或抛出异常
+    ///  If the node does not match any known type, it can return std:: monostate or throw an exception
     return std::monostate{};
 }
 
-//void GraphTraversal::DFS(std::set<const SVF::NeuronNodeVariant *> &visited, std::vector<const SVF::NeuronNodeVariant *> &path, const SVF::NeuronNodeVariant *src, const SVF::NeuronNodeVariant *dst, std::vector<Eigen::MatrixXd> in_x) {
-//    visited.insert(src); // 标记当前节点为已访问
-//    path.push_back(src); // 将当前节点加入路径
-//
-//    if (src == dst) {
-//        printPath(path); // 打印路径
-//    }
-//
-//    std::vector<Eigen::MatrixXd> IRRes;
-//    SolverEvaluate solver(in_x);
-//    std::visit([&](auto&& arg) {
-//    using T = std::decay_t<decltype(arg)>;
-//    if constexpr (!std::is_same_v<T, std::monostate>) {
-//        // 遍历当前节点的所有出边
-//        for (const auto& edge : arg->getOutEdges()) {
-//            auto *neighbor = edge->getDstNode(); // 获取邻居节点
-//
-//            // 需要将neighbor转换为SVF::NeuronNodeVariant
-//            SVF::NeuronNodeVariant variantNeighbor = convertToVariant(neighbor); // 完成转换
-//
-//                if (visited.count(&variantNeighbor) == 0) { // 如果邻居未被访问
-//                    if (neighbor->get_type() == 0) {
-//                        IRRes = solver.ReLuNeuronNodeevaluate(IRRes);
-//                    } else if (neighbor->get_type() == 1 || neighbor->get_type() == 6 || neighbor->get_type() == 7 || neighbor->get_type() == 8 || neighbor->get_type() == 9) {
-//                        const SVF::BasicOPNeuronNode *node = SVFUtil::dyn_cast<SVF::BasicOPNeuronNode>(neighbor);
-//                        IRRes = solver.BasicOPNeuronNodeevaluate(IRRes, node);
-//                    } else if (neighbor->get_type() == 2) {
-//                        SVF::MaxPoolNeuronNode *node = SVFUtil::dyn_cast<SVF::MaxPoolNeuronNode>(neighbor);
-//                        IRRes = solver.MaxPoolNeuronNodeevaluate(IRRes, node);
-//                    } else if (neighbor->get_type() == 3) {
-//                        SVF::ConvNeuronNode *node = SVFUtil::dyn_cast<SVF::ConvNeuronNode>(neighbor);
-//                        IRRes = solver.ConvNeuronNodeevaluate(IRRes, node);
-//                    } else if (neighbor->get_type() == 4) {
-//                        SVF::FullyConNeuronNode *node = SVFUtil::dyn_cast<SVF::FullyConNeuronNode>(neighbor);
-//                        IRRes = solver.FullyConNeuronNodeevaluate(IRRes, node);
-//                    } else if (neighbor->get_type() == 5) {
-//                        IRRes = solver.ConstantNeuronNodeevaluate(IRRes);
-//                    }
-//
-//                    // 递归调用DFS
-//                    DFS(visited, path, src, dst, IRRes);
-//                }
-//            }
-//        }
-//    }, *src);
-//
-//    visited.erase(src); // 在回溯时从已访问集合中移除当前节点
-//    path.pop_back(); // 从路径中移除当前节点
-//}
-// 检查 current 是否在 dst variant 中
 
 bool GraphTraversal::checkNodeInVariant(const SVF::NeuronNode* current, const NeuronNodeVariant& dst) {
     return std::visit([current](auto&& arg) -> bool {
@@ -507,9 +383,11 @@ SVF::NeuronNode* GraphTraversal::getNeuronNodePtrFromVariant(const NeuronNodeVar
     return std::visit([](auto&& arg) -> SVF::NeuronNode* {
         using T = std::decay_t<decltype(arg)>;
         if constexpr (std::is_same_v<T, std::monostate>) {
-            return nullptr; // 对应于variant未持有任何NeuronNode指针的情况
+            /// Corresponding to the situation where variant does not hold any NeuronNode pointers
+            return nullptr;
         } else {
-            return arg; // 直接返回NeuronNode指针
+            /// Return NeuronNode' pointer
+            return arg;
         }
     }, variant);
 }
@@ -520,7 +398,8 @@ SVF::NeuronNode* GraphTraversal::getNeuronNodePtrFromVariant(const NeuronNodeVar
 void GraphTraversal::DFS(std::set<const SVF::NeuronNode *> &visited, std::vector<const SVF::NeuronNode *> &path, const SVF::NeuronNodeVariant *src, const SVF::NeuronNodeVariant *dst, std::vector<Eigen::MatrixXd> in_x) {
     std::stack<std::pair<SVF::NeuronNode*, std::vector<Eigen::MatrixXd>>> stack;
 
-    stack.emplace(getNeuronNodePtrFromVariant(*src), in_x); // 确保 src 是通过解引用得到 SVF::NeuronNode
+    /// Ensure that src is obtained by dereferencing SVF:: NeuronNode
+    stack.emplace(getNeuronNodePtrFromVariant(*src), in_x);
 
     SolverEvaluate solver(in_x);
     int i = 0;
@@ -538,12 +417,12 @@ void GraphTraversal::DFS(std::set<const SVF::NeuronNode *> &visited, std::vector
         std::cout<<&current<<std::endl<<" STACK SIZE: "<<stack.size()<<std::endl;
         std::cout<<" The size of Matrix: "<<IRRes.size()<<std::endl;
 
-        if (!visited.insert(current).second) { // 如果节点已经访问过，跳过
+        if (!visited.insert(current).second) {
             std::cout<<"CONTINUE: This Node "<<&current<<" has already been visited!"<<std::endl;
             continue;
         }
 
-        path.push_back(current); // 加入路径
+        path.push_back(current);
 
         if (checkNodeInVariant(current, *dst)) {
             printPath(path);
@@ -554,13 +433,13 @@ void GraphTraversal::DFS(std::set<const SVF::NeuronNode *> &visited, std::vector
             auto *neighbor = edge->getDstNode();
 
             SVF::NeuronNodeVariant variantNeighbor = convertToVariant(neighbor);
-            std::cout<<"SrcNode: "<<current<<" ->  DSTNode: "<<neighbor<<" -> "<<&variantNeighbor<<std::endl;
+            std::cout<<"SrcNode: "<<current<<" ->  DSTNode: "<<neighbor<<" -> ConvertIns: "<<&variantNeighbor<<std::endl;
 
             std::cout<<"NodeTYpe:  "<<neighbor->get_type()<<std::endl;
 
             if (visited.count(neighbor) == 0) {
-                // 根据邻居节点的类型处理 IRRes
-                std::vector<Eigen::MatrixXd> newIRRes; // 复制当前 IRRes 以避免修改原始数据
+                /// Process IRRes based on the type of neighbor
+                std::vector<Eigen::MatrixXd> newIRRes; /// Copy the current IRRes to avoid modifying the original data
                 if (neighbor->get_type() == 0) {
                     solver.setIRMatrix(IRRes);
                     newIRRes = solver.ReLuNeuronNodeevaluate();
@@ -577,8 +456,6 @@ void GraphTraversal::DFS(std::set<const SVF::NeuronNode *> &visited, std::vector
                     std::cout<<"FINISH MAXPOOLING"<<std::endl;
                 } else if (neighbor->get_type() == 3) {
                     const SVF::ConvNeuronNode *node = static_cast<SVF::ConvNeuronNode *>(neighbor);
-                    std::cout<<"TEST  ID  COnv"<<neighbor->getId()<<std::endl;
-                    std::cout<<"TEST  ID  COnv"<<node->getId()<<std::endl;
                     solver.setIRMatrix(IRRes);
                     newIRRes = solver.ConvNeuronNodeevaluate(node);
                     std::cout<<"FINISH Conv"<<std::endl;
@@ -593,22 +470,23 @@ void GraphTraversal::DFS(std::set<const SVF::NeuronNode *> &visited, std::vector
                     newIRRes = solver.ConstantNeuronNodeevaluate();
                     std::cout<<"FINISH Constant"<<std::endl;
                 }
-                // 将邻居节点和新的 IRRes 压入栈中
-//                    TraverseVectorOfMatrices(IRRes);
+                /// Push neighbor and new IRRes into the stack
                 IRRes = newIRRes;
                 stack.emplace(neighbor, newIRRes);
-                std::cout<<"FINISH PUSHING STACK! "<<stack.size()<<std::endl<<std::endl<<std::endl;
+                std::cout<<"FINISH PUSHING STACK! "<<stack.size()<<std::endl<<std::endl;
             }
         }
+
+        /// print the IRRes Matrix
         std::cout << "IRRes content after the loop iteration:" << i << std::endl;
-        std::cout.precision(12);
+        std::cout.precision(20);
         std::cout << std::fixed;
         for (size_t j = 0; j < IRRes.size(); ++j) {
             std::cout << "Matrix " << j << ":\n";
             std::cout << "Rows: " << IRRes[j].rows() << ", Columns: " << IRRes[j].cols() << "\n";
-            std::cout << IRRes[j] << "\n\n"; // 打印矩阵的维度和内容
+            std::cout << IRRes[j] << "\n\n";
         }
-        visited.erase(current); // 处理
-        path.pop_back(); // 从路径中移除当前节点
+        visited.erase(current);
+        path.pop_back(); /// Remove current node
     }
 }
