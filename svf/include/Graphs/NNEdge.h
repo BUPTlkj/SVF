@@ -24,11 +24,11 @@ public:
 public:
     /// construct only a kind edge : Direct2Neuron
     NeuronEdge(NeuronNode* s, NeuronNode* d, GEdgeFlag k) : GenericNeuronEdgeTy(s, d, k){
+        std::cout<<"NNEdge is initing, SrcNode: "<<s<<" , DstNode: "<<d<<" , EdgeK: "<<k<<std::endl;
     }
 
     /// Destructor
     ~NeuronEdge() {}
-
 
     /// Determine whether is a NNEdge type
     inline bool is_NeuronNode() const {
@@ -50,18 +50,12 @@ public:
         return o;
     }
 
-    virtual const std::string toString() const {
-        return "";
-    }
-
+    virtual const std::string toString() const;
 
 };
 
 // Edge Direct2Neuron
 class Direct2NeuronEdge:public NeuronEdge{
-
-private:
-    //
 
 public:
     Direct2NeuronEdge(NeuronNode* s, NeuronNode* d): NeuronEdge(s, d, Direct2Neuron) {
@@ -85,7 +79,5 @@ public:
     virtual const std::string toString() const;
 };
 
-
 }
-
 #endif // SVF_NNEDGE_H

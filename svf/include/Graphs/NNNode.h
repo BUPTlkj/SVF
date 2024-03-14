@@ -16,6 +16,11 @@ class FullyConNeuronNode;
 class ConvNeuronNode;
 class ConstantNeuronNode;
 
+using NeuronNodeVariant =
+    std::variant<std::monostate, SVF::ConstantNeuronNode*,
+                 SVF::BasicOPNeuronNode*, SVF::FullyConNeuronNode*,
+                 SVF::ConvNeuronNode*, SVF::ReLuNeuronNode*,
+                 SVF::MaxPoolNeuronNode*>;
 
 typedef GenericNode<NeuronNode, NeuronEdge> GenericNeuronNodeTy;
 class NeuronNode: public GenericNeuronNodeTy{
@@ -23,16 +28,16 @@ class NeuronNode: public GenericNeuronNodeTy{
 public:
     /// ReLu, Add Sub Mul Div, Maxpooling(Flatten), Conv, FullyCon, Constant
     enum NodeK{
-        ReLuNode,
-        BasicOPNode,
-        MaxPoolNode,
-        ConvNode,
-        FullyConNode,
-        ConstantNode,
-        Sub,
-        Add,
-        Mul,
-        Div
+        ReLuNode,     //0
+        BasicOPNode,  //1
+        MaxPoolNode,  //2
+        ConvNode,     //3
+        FullyConNode, //4
+        ConstantNode, //5
+        Sub,          //6
+        Add,          //7
+        Mul,          //8
+        Div           //9
     };
 
     typedef NeuronEdge::NeuronGraphEdgeSetTy::iterator iterator; // 边 点  可以修改
@@ -43,13 +48,11 @@ public:
 public:
     /// Constructor
     /// Depends
-    NeuronNode(NodeID i, NodeK k, unsigned iw, unsigned ih, unsigned id, unsigned ow, unsigned oh, unsigned od):
-          GenericNeuronNodeTy(i, k),
-          in_width{ iw }, in_height{ ih }, in_depth{ id }, out_width{ ow },
-          out_height{ oh }, out_depth{ od }{
+    NeuronNode(NodeID i, NodeK k):
+          GenericNeuronNodeTy(i, k){
         NeuronEdges = NeuronEdgeList();
         NeuronNodes = NeuronNodeList();
-
+        std::cout<<"NNNode is initing NodeID: "<<i<<" Type: "<<k<<std::endl;
     }
 
     /// Rebuild << store NodeID in NNgraph
@@ -61,6 +64,7 @@ public:
 
     /// Add a node
     inline void addNeoronNode(const NeuronNode *nnNode){
+        std::cout<<"addNeoronNode Fun is activated, NodeID: "<<nnNode->getId()<<" Type: "<<nnNode->getNodeKind()<<std::endl;
         NeuronNodes.push_back(nnNode);
     }
 
@@ -82,53 +86,16 @@ public:
     void dump() const;
 
 public:
-    inline unsigned get_in_width() const {
-        return in_width;
-    }
-    inline unsigned get_in_height() const {
-        return in_height;
-    }
-    inline unsigned get_in_depth() const {
-        return in_depth;
-    }
-
-    inline unsigned get_out_width() const {
-        return out_width;
-    }
-    inline unsigned get_out_height() const {
-        return out_height;
-    }
-    inline unsigned get_out_depth() const {
-        return out_depth;
-    }
-
     /// Get layer‘s type(node)
     virtual NodeK get_type() const = 0;
-
-    /// Forward propagation
-    virtual std::vector<Eigen::MatrixXd> evaluate(
-        const std::vector<Eigen::MatrixXd>& x) const = 0;
-
-    virtual std::vector<Eigen::MatrixXd> backpropagate(
-        const std::vector<Eigen::MatrixXd>&,
-        const std::vector<Eigen::MatrixXd>&) const = 0;
-
 
 protected:
     NeuronEdgeList NeuronEdges;
     NeuronNodeList NeuronNodes;
 
-    /// Node Info
-protected:
-    unsigned in_width;
-    unsigned in_height;
-    unsigned in_depth;
-
-    unsigned out_width;
-    unsigned out_height;
-    unsigned out_depth;
 };
 
+/// For conv
 class FilterSubNode{
 public:
     std::vector<Eigen::MatrixXd> value;
@@ -155,8 +122,8 @@ class ReLuNeuronNode:public NeuronNode{
 
 public:
     /// Build ReLu Node
-    ReLuNeuronNode(NodeID id, unsigned in_w, unsigned in_h, unsigned in_d):
-          NeuronNode(id, ReLuNode, in_w, in_h, in_d, in_w, in_h, in_d){}
+    ReLuNeuronNode(NodeID id):
+          NeuronNode(id, ReLuNode){}
 
     static inline bool classof(const ReLuNeuronNode *)
     {
@@ -174,14 +141,8 @@ public:
     }
 
 public:
+    /// Key in ReLu
     NodeK get_type() const override;
-
-    std::vector<Eigen::MatrixXd> evaluate(
-        const std::vector<Eigen::MatrixXd>&) const override;
-
-    std::vector<Eigen::MatrixXd> backpropagate(
-        const std::vector<Eigen::MatrixXd>&,
-        const std::vector<Eigen::MatrixXd>&) const override;
 
     const std::string toString() const override;
 
@@ -193,8 +154,8 @@ public:
     std::string oper;
 
     /// Build Add/Sub/Mul/Div node
-    BasicOPNeuronNode(NodeID id, const std::string op, const std::vector<Eigen::MatrixXd>& w, unsigned in_w, unsigned in_h, unsigned in_d):
-          NeuronNode(id, BasicOPNode, in_w, in_h, in_d, in_w, in_h, in_d), constant{w}, oper{op}{};
+    BasicOPNeuronNode(NodeID id, const std::string op, const std::vector<Eigen::MatrixXd>& w):
+          NeuronNode(id, BasicOPNode), constant{w}, oper{op}{};
 
     static inline bool classof(const BasicOPNeuronNode *)
     {
@@ -210,16 +171,12 @@ public:
     {
         return node->getNodeKind() == BasicOPNode;
     }
+public:
+    inline std::vector<Eigen::MatrixXd> get_constant() const;
+    inline std::string get_oper() const;
 
 public:
     NodeK get_type() const override;
-
-    std::vector<Eigen::MatrixXd> evaluate(
-        const std::vector<Eigen::MatrixXd>&) const override;
-
-    std::vector<Eigen::MatrixXd> backpropagate(
-        const std::vector<Eigen::MatrixXd>&,
-        const std::vector<Eigen::MatrixXd>&) const override;
 
     const std::string toString() const override;
 };
@@ -235,16 +192,12 @@ public:
     unsigned pad_height;
 
     /// Bulid a maxpooling node
-    MaxPoolNeuronNode(NodeID id, unsigned ww, unsigned wh, unsigned sw, unsigned sh, unsigned pw, unsigned ph, unsigned in_w, unsigned in_h, unsigned in_d):
-          NeuronNode(id, MaxPoolNode,in_w, in_h, in_d, in_w, in_h, in_d), window_width{ww}, window_height{wh},
+    MaxPoolNeuronNode(NodeID id, unsigned ww, unsigned wh, unsigned sw, unsigned sh, unsigned pw, unsigned ph):
+          NeuronNode(id, MaxPoolNode), window_width{ww}, window_height{wh},
           stride_width(sw), stride_height(sh),
           pad_width(pw), pad_height(ph){
-        /// Calculate the relations between windows and input tensor
-        if (((in_w + 2*pw - ww) % sw != 0) || ((in_h + 2*ph - wh) % sh != 0)) {
-            throw std::runtime_error("Input dimensions and strides do not match");
-        }
-    }
 
+    }
 
     static inline bool classof(const MaxPoolNeuronNode *)
     {
@@ -261,16 +214,16 @@ public:
         return node->getNodeKind() == MaxPoolNode;
     }
 
+public:
+    inline unsigned get_window_width() const;
+    inline unsigned get_window_height() const;
+    inline unsigned get_stride_width() const;
+    inline unsigned get_stride_height() const;
+    inline unsigned get_pad_width() const;
+    inline unsigned get_pad_height() const;
 
 public:
     NodeK get_type() const override;
-
-    std::vector<Eigen::MatrixXd> evaluate(
-        const std::vector<Eigen::MatrixXd>&) const override;
-
-    std::vector<Eigen::MatrixXd> backpropagate(
-        const std::vector<Eigen::MatrixXd>&,
-        const std::vector<Eigen::MatrixXd>&) const override;
 
     const std::string toString() const override;
 };
@@ -282,29 +235,11 @@ public:
     Eigen::VectorXd bias;
 //    FullyConNeuronNode(NodeID id);
     /// the most common
-    FullyConNeuronNode(NodeID id, const Eigen::MatrixXd& w, const Eigen::VectorXd& b, unsigned in_w, unsigned in_h, unsigned in_d):
-          NeuronNode(id, FullyConNode, in_w, in_h, in_d, 1, b.size(), 1), weight{w}, bias{b}{
-        if (w.rows() != b.size()) {
-            throw std::runtime_error("Bad initialization of FCLayer");
-        }
+    FullyConNeuronNode(NodeID id, const Eigen::MatrixXd& w, const Eigen::VectorXd& b):
+          NeuronNode(id, FullyConNode), weight{w}, bias{b}{
     }
     /// For Conv's filter op
-    FullyConNeuronNode(): NeuronNode(-1,FullyConNode, 0,0,0,0,0,0){};
-//    FullyConNeuronNode(const Eigen::MatrixXd& w, const Eigen::VectorXd& b, unsigned in_w, unsigned in_h, unsigned in_d);
-    FullyConNeuronNode(NodeID id, const Eigen::MatrixXd& w, const Eigen::VectorXd& b):
-          NeuronNode(id, FullyConNode, 1, w.cols(), 1, 1, b.size(), 1), weight{ w }, bias{ b }{
-        if (w.rows() != b.size()) {
-            throw std::runtime_error("Bad initialization of FCLayer");
-        }
-    }
-
-    FullyConNeuronNode(NodeID id, const Eigen::MatrixXd& w, const Eigen::VectorXd& b, unsigned in_w, unsigned in_h, unsigned in_d, unsigned out_w, unsigned out_h, unsigned out_d):
-          NeuronNode(id, FullyConNode, in_w, in_h, in_d, out_w, out_h, out_d), weight{ w }, bias{ b } {
-        if (w.rows() != b.size()) {
-            throw std::runtime_error("Bad initialization of FCLayer");
-        }
-    }
-
+    FullyConNeuronNode(): NeuronNode(-1,FullyConNode){};
 
     static inline bool classof(const FullyConNeuronNode *)
     {
@@ -321,16 +256,13 @@ public:
         return node->getNodeKind() == FullyConNode;
     }
 
+public:
+    inline Eigen::MatrixXd get_weight() const;
+    inline Eigen::VectorXd get_bias() const;
+
 
 public:
     NodeK get_type() const override;
-
-    std::vector<Eigen::MatrixXd> evaluate(
-        const std::vector<Eigen::MatrixXd>&) const override;
-
-    std::vector<Eigen::MatrixXd> backpropagate(
-        const std::vector<Eigen::MatrixXd>&,
-        const std::vector<Eigen::MatrixXd>&) const override;
 
     const std::string toString() const override;
 };
@@ -352,49 +284,17 @@ public:
     /// bias
     std::vector<double> bias;
 
-    FullyConNeuronNode fullyer;
-
     unsigned padding;
     unsigned stride;
     // u32t
     // s32t
 
-    ConvNeuronNode(NodeID id, const std::vector<FilterSubNode>& fil, const std::vector<double> b, unsigned in_w, unsigned in_h, unsigned pad, unsigned str):
-          NeuronNode(id, ConstantNode, in_w, in_h, fil[0].get_depth(),
-                     ((in_w - fil[0].get_width() + 2*pad) / str) + 1,
-                     ((in_h - fil[0].get_height() + 2*pad) / str) + 1,
-                     fil.size()),
+    ConvNeuronNode(NodeID id, const std::vector<FilterSubNode>& fil, const std::vector<double> b, unsigned pad, unsigned str):
+          NeuronNode(id, ConstantNode),
           filter_depth{ fil[0].get_depth() }, filter_width{ fil[0].get_width() },filter_height{ fil[0].get_height() }, filter_num(fil.size()), filter(fil),
           bias{b}, padding(pad), stride(str){
-        /// to do
-        unsigned ful_con_cols = in_depth * in_height * in_width;
-        unsigned ful_con_rows = out_depth * out_height * out_width;
-
-        /// Build
-        Eigen::MatrixXd ful_weight = Eigen::MatrixXd::Zero(ful_con_rows, ful_con_cols);
-
-        /// bias
-        Eigen::VectorXd ful_con_bias(ful_con_rows);
-
-        for (unsigned i = 0; i < in_height - filter_height + 1; i++) {
-            for (unsigned j = 0; j < in_width - filter_width; j++) {
-                for (unsigned k = 0; k < filter_num; k++) {
-                    unsigned row = (in_width - filter_width + 1) * filter_num * i + filter_num * j + k;
-                    for (unsigned i_ = 0; i_ < filter_height; i_++) {
-                        for (unsigned j_ = 0; j_ < filter_width; j_++) {
-                            for (unsigned k_ = 0; k_ < filter_depth; k_++) {
-                                unsigned col = in_width * in_depth * (i + i_) + in_depth * (j + j_) + k_;
-                                ful_weight(row, col) = filter[k].value[k_](i_,j_);
-                            }
-                        }
-                    }
-                    ful_con_bias(row) = bias[k];
-                }
-            }
-        }
-        fullyer = FullyConNeuronNode(id, ful_weight, ful_con_bias, in_width, in_height, in_depth, out_width, out_height, out_depth);
+        std::cout<<filter_num<<"   "<<filter_depth<<"   "<<filter_width<<"    "<<filter_height<<std::endl;
     }
-
 
     static inline bool classof(const ConvNeuronNode *)
     {
@@ -412,25 +312,46 @@ public:
     }
 
 public:
+    inline unsigned get_filter_depth() const{
+        return filter_depth;
+    };
+    inline unsigned get_filter_width() const{
+        return filter_width;
+    };
+    inline unsigned get_filter_height() const{
+        return filter_height;
+    };
+    inline unsigned get_filter_num() const{
+        return filter_num;
+    };
+
+    inline std::vector<FilterSubNode> get_filter() const{
+        return filter;
+    };
+
+    inline std::vector<double> get_bias() const{
+        return bias;
+    };
+
+    inline unsigned get_padding() const{
+        return padding;
+    };
+    inline unsigned get_stride() const{
+        return stride;
+    };
+
+public:
     NodeK get_type() const override;
-
-    std::vector<Eigen::MatrixXd> evaluate(
-        const std::vector<Eigen::MatrixXd>&) const override;
-
-    std::vector<Eigen::MatrixXd> backpropagate(
-        const std::vector<Eigen::MatrixXd>&,
-        const std::vector<Eigen::MatrixXd>&) const override;
 
     const std::string toString() const override;
 };
-
 
 /// ConstantNeuronNode: Nothing needs to be done, just propagates the input without op.
 class ConstantNeuronNode:public NeuronNode{
 
 public:
-    ConstantNeuronNode(NodeID id, unsigned in_w, unsigned in_h, unsigned in_d):
-          NeuronNode(id, ConstantNode, in_w, in_h, in_d, in_w, in_h, in_d){}
+    ConstantNeuronNode(NodeID id):
+          NeuronNode(id, ConstantNode){}
 
     static inline bool classof(const ConstantNeuronNode *)
     {
@@ -448,18 +369,11 @@ public:
     }
 
 public:
+    /// Key in this type
     NodeK get_type() const override;
-
-    std::vector<Eigen::MatrixXd> evaluate(
-        const std::vector<Eigen::MatrixXd>&) const override;
-
-    std::vector<Eigen::MatrixXd> backpropagate(
-        const std::vector<Eigen::MatrixXd>&,
-        const std::vector<Eigen::MatrixXd>&) const override;
 
     const std::string toString() const override;
 };
 
 }
-
 #endif // SVF_NNNODE_H

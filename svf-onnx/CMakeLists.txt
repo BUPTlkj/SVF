@@ -2,9 +2,9 @@ find_package(Python 3.11 EXACT COMPONENTS Interpreter Development REQUIRED)
 
 #target_link_libraries (${PROJECT_NAME} ${PYTHON_DL})
 
-add_executable(svf-onnx SVFONNX.cpp
-        1SVFONNX.cpp
-        1SVFONNX.h
+add_executable(svf-onnx
+        SVFONNX.cpp
+        SVFONNX.h
         Solver.cpp
         Solver.h
         Solver.h

@@ -4,8 +4,7 @@
 #define SVF_SOLVER_H
 
 #include "Eigen/Dense"
-#include "Graphs/1NNGraph.h"
-
+#include "Graphs/NNGraph.h"
 
 class SolverEvaluate{
 public:

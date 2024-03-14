@@ -1,5 +1,9 @@
+#include "../svf-onnx/CheckModels.h"
+#include "../svf-onnx/Solver.h"
 #include "Graphs/NNGraph.h"
+#include "SVFIR/SVFIR.h"
 #include "Util/SVFUtil.h"
+#include "iomanip"
 
 using namespace SVF;
 
@@ -9,41 +13,6 @@ NeuronNode::NodeK ReLuNeuronNode::get_type() const{
     return ReLuNode;
 }
 
-std::vector<Eigen::MatrixXd> ReLuNeuronNode::evaluate(const std::vector<Eigen::MatrixXd>& x_in) const{
-    std::vector<Eigen::MatrixXd> x_out;
-    for (Eigen::MatrixXd mat : x_in) {
-        /* rows cols
-            * Construct a List
-         */
-        Eigen::MatrixXd o(mat.rows(), mat.cols());
-        for (unsigned i = 0; i < mat.rows(); i++) {
-            for (unsigned j = 0; j < mat.cols(); j++) {
-                o(i, j) = std::max(0.0, mat(i, j));
-            }
-        }
-        /// Channel
-        x_out.push_back(o);
-    }
-    return x_out;
-}
-
-std::vector<Eigen::MatrixXd> ReLuNeuronNode::backpropagate(const std::vector<Eigen::MatrixXd>& in_x, const std::vector<Eigen::MatrixXd>& grad) const{
-    std::vector<Eigen::MatrixXd> x_grad;
-    for (unsigned i = 0; i < in_depth; i++) {
-        x_grad.push_back(Eigen::MatrixXd(in_height, in_width));
-        for (unsigned j = 0; j < in_height; j++) {
-            for (unsigned k = 0; k < in_width; k++) {
-                if (in_x[i](j, k) < 0) {
-                    x_grad[i](j, k) = 0.0;
-                }
-                else {
-                    x_grad[i](j, k) = in_x[i](j, k);
-                }
-            }
-        }
-    }
-    return x_grad;
-}
 
 /// filter
 unsigned int FilterSubNode::get_depth() const{
@@ -107,69 +76,7 @@ NeuronNode::NodeK BasicOPNeuronNode::get_type() const{
     return BasicOPNode;
 }
 
-std::vector<Eigen::MatrixXd> BasicOPNeuronNode::evaluate(const std::vector<Eigen::MatrixXd>& in_x) const{
-    std::vector<Eigen::MatrixXd> result;
 
-    /// ensure A and B the number of depth equal
-    if (in_x.size() != constant.size()) {
-        std::cerr << "Error: The number of channels must be the same." << std::endl;
-        return result;
-    }
-
-    for (size_t i = 0; i < in_x.size(); ++i) {
-        /// ensure the size of each channel correct
-        if (constant[i].rows() != 1 || constant[i].cols() != 1) {
-            std::cerr << "Error: B's channel matrices must be 1x1." << std::endl;
-            return result;
-        }
-
-        /// Create a matrix of the same size as the channel of A,
-        /// where all elements are the corresponding channel values of B
-        Eigen::MatrixXd temp = Eigen::MatrixXd::Constant(in_x[i].rows(), in_x[i].cols(), constant[i](0,0));
-
-        /// Subtract the channel of A from the above matrix
-        if(oper == "Add"){
-            result.push_back(in_x[i] + temp);
-        }else if(oper == "Sub"){
-            result.push_back(in_x[i] - temp);
-        }else if(oper == "Mul"){
-            result.push_back(in_x[i].cwiseProduct(temp));
-        }else if(oper == "Div"){
-            if (constant[i](0, 0) == 0) {
-                std::cerr << "Error: Division by zero." << std::endl;
-                assert(!(constant[i](0, 0) == 0));
-            }else{
-                result.push_back(in_x[i].cwiseQuotient(temp));
-            }
-        }
-    }
-    return result;
-}
-
-std::vector<Eigen::MatrixXd> BasicOPNeuronNode::backpropagate(const std::vector<Eigen::MatrixXd>& x, const std::vector<Eigen::MatrixXd>& grad) const{
-    /// Flattening operation, column vector
-    Eigen::VectorXd grad_x(out_height * out_width * out_depth);
-    for (unsigned i = 0; i < out_depth; i++) {
-        for (unsigned j = 0; j < out_height; j++) {
-            for (unsigned k = 0; k < out_width; k++) {
-                grad_x(out_width * out_depth * j + out_depth * k + i) = grad[i](j, k);
-            }
-        }
-    }
-    /// Gradient, this needs to be modified according to the situation todo
-    Eigen::VectorXd out_col = grad_x.transpose();
-    /// Rebuild the output
-    std::vector<Eigen::MatrixXd> out_grad;
-    for (unsigned i = 0; i < in_depth; i++) {
-        out_grad.push_back(Eigen::MatrixXd(out_height, out_width));
-        for (unsigned j = 0; j < in_height; j++) {
-            for (unsigned k = 0; k < in_width; k++) {
-                out_grad[i](j, k) = out_col(out_width * out_depth * j + out_depth * k + i);
-            }
-        }
-    }
-    return out_grad;
-}
 
 /// Maxpooling
 
@@ -177,77 +84,30 @@ NeuronNode::NodeK MaxPoolNeuronNode::get_type() const{
     return MaxPoolNode;
 }
 
-std::vector<Eigen::MatrixXd> MaxPoolNeuronNode::evaluate(const std::vector<Eigen::MatrixXd>& in_x) const{
-    std::vector<Eigen::MatrixXd> out_x;
-    for (size_t depth = 0; depth < in_x.size(); ++depth) {
-        /// Padding
-        unsigned padded_height = in_height + 2 * pad_height;
-        unsigned padded_width = in_width + 2 * pad_width;
-        Eigen::MatrixXd paddedMatrix = Eigen::MatrixXd::Zero(padded_height, padded_width);
-        paddedMatrix.block(pad_height, pad_width, in_height, in_width) = in_x[depth];
-
-        /// Calculate the size of the output feature map
-        unsigned outHeight = (padded_height - window_height) / stride_height + 1;
-        unsigned outWidth = (padded_width - window_width) / stride_width + 1;
-        Eigen::MatrixXd outMatrix(outHeight, outWidth);
-
-        for (unsigned i = 0; i < outHeight; ++i) {
-            for (unsigned j = 0; j < outWidth; ++j) {
-                double maxVal = -std::numeric_limits<double>::infinity();
-                for (unsigned m = 0; m < window_height; ++m) {
-                    for (unsigned n = 0; n < window_width; ++n) {
-                        unsigned rowIndex = i * stride_height + m;
-                        unsigned colIndex = j * stride_width + n;
-                        double currentVal = paddedMatrix(rowIndex, colIndex);
-                        if (currentVal > maxVal) {
-                            maxVal = currentVal;
-                        }
-                    }
-                }
-                outMatrix(i, j) = maxVal;
-            }
-        }
-        out_x.push_back(outMatrix);
-    }
-    return out_x;
+unsigned int MaxPoolNeuronNode::get_window_width() const{
+    return window_height;
 }
 
-std::vector<Eigen::MatrixXd> MaxPoolNeuronNode::backpropagate(const std::vector<Eigen::MatrixXd>& in_x, const std::vector<Eigen::MatrixXd>& grad) const{
-    std::vector<Eigen::MatrixXd> x_grad;
-    for (unsigned i = 0; i < in_depth; i++) {
-        x_grad.push_back(Eigen::MatrixXd(in_height, in_width));
-        for (unsigned j = 0; j < in_height; j++) {
-            for (unsigned k = 0; k < in_width; k++) {
-                unsigned j_max = 0;
-                unsigned k_max = 0;
-                double max = in_x[i](window_height* j, window_width* k);
-                for (unsigned j_ = 0; j_ < window_height; j_++) {
-                    for (unsigned k_ = 0; k_ < window_width; k_++) {
-                        double current_val = in_x[i](window_height* j + j_, window_width* k + k_);
-                        if (current_val > max) {
-                            j_max = j_;
-                            k_max = k_;
-                            max = current_val;
-                        }
-                    }
-                }
-
-                for (unsigned j_ = 0; j_ < window_height; j_++) {
-                    for (unsigned k_ = 0; k_ < window_width; k_++) {
-                        if ((j_ == j_max) && (k_ == k_max)) {
-                            x_grad[i](window_height* j + j_, window_width* k + k_) = grad[i](j, k);
-                        }
-                        else {
-                            x_grad[i](window_height* j + j_, window_width* k + k_) = 0.0;
-                        }
-                    }
-                }
-
-            }
-        }
-    }
-    return x_grad;
+unsigned int MaxPoolNeuronNode::get_window_height() const{
+    return window_width;
 }
+
+unsigned int MaxPoolNeuronNode::get_stride_width() const{
+    return stride_width;
+}
+
+unsigned int MaxPoolNeuronNode::get_stride_height() const{
+    return stride_height;
+}
+
+unsigned int MaxPoolNeuronNode::get_pad_width() const{
+    return pad_width;
+}
+
+unsigned int MaxPoolNeuronNode::get_pad_height() const{
+    return pad_height;
+}
+
 
 /// FullyCon
 
@@ -255,131 +115,58 @@ NeuronNode::NodeK FullyConNeuronNode::get_type() const{
     return FullyConNode;
 }
 
-std::vector<Eigen::MatrixXd> FullyConNeuronNode::evaluate(const std::vector<Eigen::MatrixXd>& in_x) const{
-    /// The step of processing input flattening operation is equivalent to the GEMM node operation in ONNX
-    Eigen::VectorXd x_ser(in_depth * in_height * in_width);
-    for (unsigned i = 0; i < in_depth; i++) {
-        for (unsigned j = 0; j < in_height; j++) {
-            for (unsigned k = 0; k < in_width; k++) {
-                x_ser(in_width * in_depth * j + in_depth * k + i) = in_x[i](j, k);
-            }
-        }
-    }
-
-    ///wx+b
-    Eigen::VectorXd val = weight * x_ser + bias;
-
-    /// Restore output
-    std::vector<Eigen::MatrixXd> out;
-
-    /// Assignment
-    for (unsigned i = 0; i < out_depth; i++) {
-        out.push_back(Eigen::MatrixXd(out_height, out_width));
-        for (unsigned j = 0; j < out_height; j++) {
-            for (unsigned k = 0; k < out_width; k++) {
-                out[i](j, k) = x_ser(out_width * out_depth * j + out_depth * k + i);
-            }
-        }
-    }
-    return out;
+Eigen::MatrixXd FullyConNeuronNode::get_weight() const{
+    return weight;
 }
 
-std::vector<Eigen::MatrixXd> FullyConNeuronNode::backpropagate(const std::vector<Eigen::MatrixXd>& x, const std::vector<Eigen::MatrixXd>& grad) const{
-    /// Flatten
-    Eigen::VectorXd grad_x(out_height * out_width * out_depth);
-    for (unsigned i = 0; i < out_depth; i++) {
-        for (unsigned j = 0; j < out_height; j++) {
-            for (unsigned k = 0; k < out_width; k++) {
-                grad_x(out_width * out_depth * j + out_depth * k + i) = grad[i](j, k);
-            }
-        }
-    }
-
-    Eigen::VectorXd out_col = weight * grad_x.transpose();
-    /// Rebuild the output
-    std::vector<Eigen::MatrixXd> out_grad;
-    for (unsigned i = 0; i < in_depth; i++) {
-        out_grad.push_back(Eigen::MatrixXd(out_height, out_width));
-        for (unsigned j = 0; j < in_height; j++) {
-            for (unsigned k = 0; k < in_width; k++) {
-                out_grad[i](j, k) = out_col(out_width * out_depth * j + out_depth * k + i);
-            }
-        }
-    }
-    return out_grad;
+Eigen::VectorXd FullyConNeuronNode::get_bias() const{
+    return bias;
 }
 
+
+/// Conv
 NeuronNode::NodeK ConvNeuronNode::get_type() const{
     return ConvNode;
 }
 
-std::vector<Eigen::MatrixXd> ConvNeuronNode::evaluate(const std::vector<Eigen::MatrixXd>& x) const{
-    /// Padding
-    std::cout<<"fun"<<std::endl;
-    std::vector<Eigen::MatrixXd> padded_x(x.size());
-    for (size_t i = 0; i < x.size(); ++i) {
-        std::cout<<i<<std::endl;
-        padded_x[i] = Eigen::MatrixXd::Zero(x[i].rows() + 2*padding, x[i].cols() + 2*padding);
-        padded_x[i].block(padding, padding, x[i].rows(), x[i].cols()) = x[i];
-    }
-    std::cout<<"ks"<<std::endl;
+//unsigned int ConvNeuronNode::get_filter_depth() const{
+//    return filter_depth;
+//}
 
-    /// Calculate the output feature map based on filling and step size
-    std::vector<Eigen::MatrixXd> out(filter_num, Eigen::MatrixXd(out_height, out_width));
-    for (int i = 0; i < filter_num; i++) {
-        for (int j = 0; j < out_width; j++) {
-            for (int k = 0; k < out_height; k++) {
-                double sum = 0;
-                for (int i_ = 0; i_ < filter_depth; i_++) {
-                    for (int j_ = 0; j_ < filter_height; j_++) {
-                        for (int k_ = 0; k_ < filter_width; k_++) {
-                            /// Strides
-                            int row = k * stride + j_;
-                            int col = j * stride + k_;
-                            if (row < padded_x[i_].rows() && col < padded_x[i_].cols()) {
-                                sum += filter[i].value[i_](j_, k_) * padded_x[i_](row, col);
-                            }
-                        }
-                    }
-                }
-                /// Calculate the output at the current position and add a bias
-                out[i](k, j) = sum + bias[i];
-            }
-        }
-    }
-    return out;
-}
 
-std::vector<Eigen::MatrixXd> ConvNeuronNode::backpropagate(const std::vector<Eigen::MatrixXd>& in_x, const std::vector<Eigen::MatrixXd>& grad) const{
-    return fullyer.backpropagate(in_x, grad);
-}
+//unsigned int ConvNeuronNode::get_filter_width() const{
+//    return filter_width;
+//}
+//
+//unsigned int ConvNeuronNode::get_filter_height() const{
+//    return filter_height;
+//}
+//
+//unsigned int ConvNeuronNode::get_filter_num() const{
+//    return filter_num;
+//}
+//
+//std::vector<FilterSubNode> ConvNeuronNode::get_filter() const{
+//    return filter;
+//}
+//
+//std::vector<double> ConvNeuronNode::get_bias() const{
+//    return bias;
+//}
+//
+//unsigned int ConvNeuronNode::get_padding() const{
+//    return padding;
+//}
+//
+//unsigned int ConvNeuronNode::get_stride() const{
+//    return stride;
+//}
 
+/// Constant
 NeuronNode::NodeK ConstantNeuronNode::get_type() const{
     return ConstantNode;
 }
 
-std::vector<Eigen::MatrixXd> ConstantNeuronNode::evaluate(const std::vector<Eigen::MatrixXd>& x) const{
-    /// This is an entry, nothing needs to do.
-    return x;
-}
-
-std::vector<Eigen::MatrixXd> ConstantNeuronNode::backpropagate(const std::vector<Eigen::MatrixXd>& in_x, const std::vector<Eigen::MatrixXd>& grad) const{
-    std::vector<Eigen::MatrixXd> x_grad;
-    for (unsigned i = 0; i < in_depth; i++) {
-        x_grad.push_back(Eigen::MatrixXd(in_height, in_width));
-        for (unsigned j = 0; j < in_height; j++) {
-            for (unsigned k = 0; k < in_width; k++) {
-                if (in_x[i](j, k) < 0) {
-                    x_grad[i](j, k) = 0.0;
-                }
-                else {
-                    x_grad[i](j, k) = in_x[i](j, k);
-                }
-            }
-        }
-    }
-    return x_grad;
-}
 
 /// ques
 void NeuronNode::dump() const{
@@ -428,7 +215,7 @@ const std::string ConstantNeuronNode::toString() const{
     return rawstr.str();
 }
 
-// 边的具体
+/// Edge
 const std::string Direct2NeuronEdge::toString() const{
     std::string str;
     std::stringstream rawstr(str);
@@ -436,11 +223,15 @@ const std::string Direct2NeuronEdge::toString() const{
     return rawstr.str();
 }
 
+const std::string NeuronEdge::toString() const{
+    std::string str;
+    std::stringstream rawstr(str);
+    rawstr << "NNEdge: [NNNode" << getDstID() << " <-- NNNode" << getSrcID() << "]\t";
+    return rawstr.str();
+}
 
-
-//NeuronNet::~NeuronNet()
-//{}
-
+NeuronNet::~NeuronNet()
+{}
 
 NeuronEdge* NeuronNet::hasNeuronEdge(SVF::NeuronNode* src, SVF::NeuronNode* dst, NeuronEdge::NeuronEdgeK kind)
 {
@@ -487,92 +278,337 @@ void NeuronNet::view()
 {
     SVF::ViewGraph(this, "SVF NeuronNet Graph");
 }
+
+
+namespace SVF
+{
+template <> struct DOTGraphTraits<NeuronNet*> : public DOTGraphTraits<SVFIR*>
+{
+    typedef NeuronNode NodeType;
+    DOTGraphTraits(bool isSimple = false) : DOTGraphTraits<SVFIR*>(isSimple) {}
+
+    /// Get the Graph's name
+    static std::string getGraphName(NeuronNet*)
+    {
+        return "Neuronnet Graph";
+    }
+
+    static std::string getSimpleNodeLabel(NodeType* node, NeuronNet*)
+    {
+        return node->toString();
+    }
+
+    std::string getNodeLabel(NodeType* node, NeuronNet* graph)
+    {
+        return getSimpleNodeLabel(node, graph);
+    }
+
+    static std::string getNodeAttributes(NodeType* node, NeuronNet*)
+    {
+        std::string str;
+        std::stringstream rawstr(str);
+
+        if (SVFUtil::isa<ReLuNeuronNode>(node))
+        {
+            rawstr << "color=black";
+        }
+        else if (SVFUtil::isa<BasicOPNeuronNode>(node))
+        {
+            rawstr << "color=yellow";
+        }
+        else if (SVFUtil::isa<FullyConNeuronNode>(node))
+        {
+            rawstr << "color=green";
+        }
+        else if (SVFUtil::isa<ConvNeuronNode>(node))
+        {
+            rawstr << "color=red";
+        }
+        else if (SVFUtil::isa<MaxPoolNeuronNode>(node))
+        {
+            rawstr << "color=blue";
+        }
+        else if (SVFUtil::isa<ConstantNeuronNode>(node))
+        {
+            rawstr << "color=purple";
+        }
+        else
+            assert(false && "no such kind of node!!");
+
+        rawstr << "";
+
+        return rawstr.str();
+    }
+
+    template <class EdgeIter>
+    static std::string getEdgeAttributes(NodeType*, EdgeIter EI, NeuronNet*)
+    {
+        NeuronEdge* edge = *(EI.getCurrent());
+        assert(edge && "No edge found!!");
+        if (SVFUtil::isa<Direct2NeuronEdge>(edge))
+            return "style=solid,color=red";
+        else
+            return "style=solid";
+        return "";
+    }
+
+    template <class EdgeIter>
+    static std::string getEdgeSourceLabel(NodeType*, EdgeIter EI)
+    {
+        NeuronEdge* edge = *(EI.getCurrent());
+        assert(edge && "No edge found!!");
+
+        std::string str;
+        std::stringstream rawstr(str);
+
+        rawstr << "";
+        return rawstr.str();
+    };
+
+};
+}
+
+/// By Edge odo
+void GraphTraversalE::printPathE(std::vector<const SVF::Direct2NeuronEdge *> &path1){
+    std::string pathStr = "START: ";
+    pathStr += std::to_string(path1.front()->getDstNode()->getId()) + "->";
+    for (size_t i = 1; i < path1.size(); ++i) // Started from the first not zero.
+    {
+        pathStr += std::to_string(path1[i]->getDstNode()->getId()) + "->";
+    }
+    pathStr += "END";
+    paths.insert(pathStr);
+    std::cout << pathStr << std::endl;
+
+}
+
+
+
+void GraphTraversalE::DFSE(const SVF::Direct2NeuronEdge *src_edge, const SVF::NeuronNodeVariant *dst, std::vector<Eigen::MatrixXd> in_x){
+
+
+//     Mark the source node as visited
+//    auto *src = src_edge->getSrcNode();
+
+
+
+}
+
+
+
+
+
+/// BY NODE todo
+
+void GraphTraversal::printPath(std::vector<const SVF::NeuronNode *> &path){
+    std::string output = "START: ";
+    for (size_t i = 0; i < path.size(); ++i) {
+        output += std::to_string(path[i]->getId());
+        //            output += std::to_string(path[i]->getNodeID());
+        if (i < path.size() - 1) {
+            output += "->";
+        }
+    }
+//    for (const auto& nodeVariant : path) {
+//        std::visit([&output](auto&& arg) {
+//            using T = std::decay_t<decltype(arg)>;
+//            if constexpr (!std::is_same_v<T, std::monostate>) {
+//                output += std::to_string(arg->getId());
+//            }
+//        }, *nodeVariant);
+//        output += "->";
+//    }
+//    output += "->END";
+    paths.insert(output);
+};
+
+SVF::NeuronNodeVariant GraphTraversal::convertToVariant(SVF::NeuronNode* node) {
+    // 检查node的具体类型并相应地构造NeuronNodeVariant
+    if (auto* constantNode = SVFUtil::dyn_cast<SVF::ConstantNeuronNode>(node)) {
+        return constantNode;
+    } else if (auto* basicOPNode = SVFUtil::dyn_cast<SVF::BasicOPNeuronNode>(node)) {
+        return basicOPNode;
+    } else if (auto* fullyConNode = SVFUtil::dyn_cast<SVF::FullyConNeuronNode>(node)) {
+        return fullyConNode;
+    } else if (auto* convNode = SVFUtil::dyn_cast<SVF::ConvNeuronNode>(node)) {
+        return convNode;
+    } else if (auto* reLuNode = SVFUtil::dyn_cast<SVF::ReLuNeuronNode>(node)) {
+        return reLuNode;
+    } else if (auto* maxPoolNode = SVFUtil::dyn_cast<SVF::MaxPoolNeuronNode>(node)) {
+        return maxPoolNode;
+    }
+    // 如果node不匹配任何已知类型，可以返回std::monostate或抛出异常
+    return std::monostate{};
+}
+
+//void GraphTraversal::DFS(std::set<const SVF::NeuronNodeVariant *> &visited, std::vector<const SVF::NeuronNodeVariant *> &path, const SVF::NeuronNodeVariant *src, const SVF::NeuronNodeVariant *dst, std::vector<Eigen::MatrixXd> in_x) {
+//    visited.insert(src); // 标记当前节点为已访问
+//    path.push_back(src); // 将当前节点加入路径
 //
-//namespace SVF
-//{
-//template <> struct DOTGraphTraits<NeuronNet*> : public DOTGraphTraits<SVFIR*>
-//{
-//    typedef ICFGNode NodeType;
-//    DOTGraphTraits(bool isSimple = false) : DOTGraphTraits<SVFIR*>(isSimple) {}
-//
-//    /// Get the Graph's name
-//    static std::string getGraphName(NeuronNet*)
-//    {
-//        return "Neuronnet Graph";
+//    if (src == dst) {
+//        printPath(path); // 打印路径
 //    }
 //
-//    static std::string getSimpleNodeLabel(NodeType* node, NeuronNet*)
-//    {
-//        return node->toString();
-//    }
+//    std::vector<Eigen::MatrixXd> IRRes;
+//    SolverEvaluate solver(in_x);
+//    std::visit([&](auto&& arg) {
+//    using T = std::decay_t<decltype(arg)>;
+//    if constexpr (!std::is_same_v<T, std::monostate>) {
+//        // 遍历当前节点的所有出边
+//        for (const auto& edge : arg->getOutEdges()) {
+//            auto *neighbor = edge->getDstNode(); // 获取邻居节点
 //
-//    std::string getNodeLabel(NodeType* node, NeuronNet* graph)
-//    {
-//        return getSimpleNodeLabel(node, graph);
-//    }
+//            // 需要将neighbor转换为SVF::NeuronNodeVariant
+//            SVF::NeuronNodeVariant variantNeighbor = convertToVariant(neighbor); // 完成转换
 //
-//    static std::string getNodeAttributes(NodeType* node, ICFG*)
-//    {
-//        std::string str;
-//        std::stringstream rawstr(str);
+//                if (visited.count(&variantNeighbor) == 0) { // 如果邻居未被访问
+//                    if (neighbor->get_type() == 0) {
+//                        IRRes = solver.ReLuNeuronNodeevaluate(IRRes);
+//                    } else if (neighbor->get_type() == 1 || neighbor->get_type() == 6 || neighbor->get_type() == 7 || neighbor->get_type() == 8 || neighbor->get_type() == 9) {
+//                        const SVF::BasicOPNeuronNode *node = SVFUtil::dyn_cast<SVF::BasicOPNeuronNode>(neighbor);
+//                        IRRes = solver.BasicOPNeuronNodeevaluate(IRRes, node);
+//                    } else if (neighbor->get_type() == 2) {
+//                        SVF::MaxPoolNeuronNode *node = SVFUtil::dyn_cast<SVF::MaxPoolNeuronNode>(neighbor);
+//                        IRRes = solver.MaxPoolNeuronNodeevaluate(IRRes, node);
+//                    } else if (neighbor->get_type() == 3) {
+//                        SVF::ConvNeuronNode *node = SVFUtil::dyn_cast<SVF::ConvNeuronNode>(neighbor);
+//                        IRRes = solver.ConvNeuronNodeevaluate(IRRes, node);
+//                    } else if (neighbor->get_type() == 4) {
+//                        SVF::FullyConNeuronNode *node = SVFUtil::dyn_cast<SVF::FullyConNeuronNode>(neighbor);
+//                        IRRes = solver.FullyConNeuronNodeevaluate(IRRes, node);
+//                    } else if (neighbor->get_type() == 5) {
+//                        IRRes = solver.ConstantNeuronNodeevaluate(IRRes);
+//                    }
 //
-//        if (SVFUtil::isa<ReLuNeuronNode>(node))
-//        {
-//            rawstr << "color=black";
+//                    // 递归调用DFS
+//                    DFS(visited, path, src, dst, IRRes);
+//                }
+//            }
 //        }
-//        else if (SVFUtil::isa<BasicOPNeuronNode>(node))
-//        {
-//            rawstr << "color=yellow";
-//        }
-//        else if (SVFUtil::isa<FullyConNeuronNode>(node))
-//        {
-//            rawstr << "color=green";
-//        }
-//        else if (SVFUtil::isa<ConvNeuronNode>(node))
-//        {
-//            rawstr << "color=red";
-//        }
-//        else if (SVFUtil::isa<MaxPoolNeuronNode>(node))
-//        {
-//            rawstr << "color=blue";
-//        }
-//        else if (SVFUtil::isa<ConstantNeuronNode>(node))
-//        {
-//            rawstr << "color=purple";
-//        }
-//        else
-//            assert(false && "no such kind of node!!");
+//    }, *src);
 //
-//        rawstr << "";
-//
-//        return rawstr.str();
-//    }
-//
-//    template <class EdgeIter>
-//    static std::string getEdgeAttributes(NodeType*, EdgeIter EI, NeuronNet*)
-//    {
-//        NeuronEdge* edge = *(EI.getCurrent());
-//        assert(edge && "No edge found!!");
-//        if (SVFUtil::isa<Direct2NeuronEdge>(edge))
-//            return "style=solid,color=red";
-//        else
-//            return "style=solid";
-//        return "";
-//    }
-//
-//    template <class EdgeIter>
-//    static std::string getEdgeSourceLabel(NodeType*, EdgeIter EI)
-//    {
-//        NeuronEdge* edge = *(EI.getCurrent());
-//        assert(edge && "No edge found!!");
-//
-//        std::string str;
-//        std::stringstream rawstr(str);
-//        if (Direct2NeuronEdge* dirCall =
-//                SVFUtil::dyn_cast<Direct2NeuronEdge>(edge))
-//            rawstr << dirCall->getCallSite();
-//        return rawstr.str();
-//    };
-//
+//    visited.erase(src); // 在回溯时从已访问集合中移除当前节点
+//    path.pop_back(); // 从路径中移除当前节点
 //}
-//}
+// 检查 current 是否在 dst variant 中
+
+bool GraphTraversal::checkNodeInVariant(const SVF::NeuronNode* current, const NeuronNodeVariant& dst) {
+    return std::visit([current](auto&& arg) -> bool {
+        using T = std::decay_t<decltype(arg)>;
+        if constexpr (!std::is_same_v<T, std::monostate>) {
+            return current == static_cast<const SVF::NeuronNode*>(arg);
+        } else {
+            return false;
+        }
+    }, dst);
+}
+
+SVF::NeuronNode* GraphTraversal::getNeuronNodePtrFromVariant(const NeuronNodeVariant& variant) {
+    return std::visit([](auto&& arg) -> SVF::NeuronNode* {
+        using T = std::decay_t<decltype(arg)>;
+        if constexpr (std::is_same_v<T, std::monostate>) {
+            return nullptr; // 对应于variant未持有任何NeuronNode指针的情况
+        } else {
+            return arg; // 直接返回NeuronNode指针
+        }
+    }, variant);
+}
+
+
+/// todo 3.13
+/// matrix into interval
+void GraphTraversal::DFS(std::set<const SVF::NeuronNode *> &visited, std::vector<const SVF::NeuronNode *> &path, const SVF::NeuronNodeVariant *src, const SVF::NeuronNodeVariant *dst, std::vector<Eigen::MatrixXd> in_x) {
+    std::stack<std::pair<SVF::NeuronNode*, std::vector<Eigen::MatrixXd>>> stack;
+
+    stack.emplace(getNeuronNodePtrFromVariant(*src), in_x); // 确保 src 是通过解引用得到 SVF::NeuronNode
+
+    SolverEvaluate solver(in_x);
+    int i = 0;
+    std::vector<Eigen::MatrixXd> IRRes;
+
+    while (!stack.empty()) {
+        std::cout<<" Node: "<<i<<std::endl;
+        i++;
+        auto currentPair = stack.top();
+        stack.pop();
+
+        const SVF::NeuronNode* current = currentPair.first;
+        IRRes = currentPair.second;
+
+        std::cout<<&current<<std::endl<<" STACK SIZE: "<<stack.size()<<std::endl;
+        std::cout<<" The size of Matrix: "<<IRRes.size()<<std::endl;
+
+        if (!visited.insert(current).second) { // 如果节点已经访问过，跳过
+            std::cout<<"CONTINUE: This Node "<<&current<<" has already been visited!"<<std::endl;
+            continue;
+        }
+
+        path.push_back(current); // 加入路径
+
+        if (checkNodeInVariant(current, *dst)) {
+            printPath(path);
+        }
+
+
+        for (const auto& edge : current->getOutEdges()) {
+            auto *neighbor = edge->getDstNode();
+
+            SVF::NeuronNodeVariant variantNeighbor = convertToVariant(neighbor);
+            std::cout<<"SrcNode: "<<current<<" ->  DSTNode: "<<neighbor<<" -> "<<&variantNeighbor<<std::endl;
+
+            std::cout<<"NodeTYpe:  "<<neighbor->get_type()<<std::endl;
+
+            if (visited.count(neighbor) == 0) {
+                // 根据邻居节点的类型处理 IRRes
+                std::vector<Eigen::MatrixXd> newIRRes; // 复制当前 IRRes 以避免修改原始数据
+                if (neighbor->get_type() == 0) {
+                    solver.setIRMatrix(IRRes);
+                    newIRRes = solver.ReLuNeuronNodeevaluate();
+                    std::cout<<"FINISH RELU"<<std::endl;
+                } else if (neighbor->get_type() == 1 || neighbor->get_type() == 6 || neighbor->get_type() == 7 || neighbor->get_type() == 8 || neighbor->get_type() == 9) {
+                    const SVF::BasicOPNeuronNode *node = SVFUtil::dyn_cast<SVF::BasicOPNeuronNode>(neighbor);
+                    solver.setIRMatrix(IRRes);
+                    newIRRes = solver.BasicOPNeuronNodeevaluate(node);
+                    std::cout<<"FINISH BAIC"<<std::endl;
+                } else if (neighbor->get_type() == 2) {
+                    const SVF::MaxPoolNeuronNode *node = SVFUtil::dyn_cast<SVF::MaxPoolNeuronNode>(neighbor);
+                    solver.setIRMatrix(IRRes);
+                    newIRRes = solver.MaxPoolNeuronNodeevaluate(node);
+                    std::cout<<"FINISH MAXPOOLING"<<std::endl;
+                } else if (neighbor->get_type() == 3) {
+                    const SVF::ConvNeuronNode *node = static_cast<SVF::ConvNeuronNode *>(neighbor);
+                    std::cout<<"TEST  ID  COnv"<<neighbor->getId()<<std::endl;
+                    std::cout<<"TEST  ID  COnv"<<node->getId()<<std::endl;
+                    solver.setIRMatrix(IRRes);
+                    newIRRes = solver.ConvNeuronNodeevaluate(node);
+                    std::cout<<"FINISH Conv"<<std::endl;
+                } else if (neighbor->get_type() == 4) {
+                    const SVF::FullyConNeuronNode *node = SVFUtil::dyn_cast<SVF::FullyConNeuronNode>(neighbor);
+                    solver.setIRMatrix(IRRes);
+                    std::cout<<"*******************"<<std::endl;
+                    newIRRes = solver.FullyConNeuronNodeevaluate(node);
+                    std::cout<<"FINISH FullyConnected"<<std::endl;
+                } else if (neighbor->get_type() == 5) {
+                    solver.setIRMatrix(IRRes);
+                    newIRRes = solver.ConstantNeuronNodeevaluate();
+                    std::cout<<"FINISH Constant"<<std::endl;
+                }
+                // 将邻居节点和新的 IRRes 压入栈中
+//                    TraverseVectorOfMatrices(IRRes);
+                IRRes = newIRRes;
+                stack.emplace(neighbor, newIRRes);
+                std::cout<<"FINISH PUSHING STACK! "<<stack.size()<<std::endl<<std::endl<<std::endl;
+            }
+        }
+        std::cout << "IRRes content after the loop iteration:" << i << std::endl;
+        std::cout.precision(12);
+        std::cout << std::fixed;
+        for (size_t j = 0; j < IRRes.size(); ++j) {
+            std::cout << "Matrix " << j << ":\n";
+            std::cout << "Rows: " << IRRes[j].rows() << ", Columns: " << IRRes[j].cols() << "\n";
+            std::cout << IRRes[j] << "\n\n"; // 打印矩阵的维度和内容
+        }
+        visited.erase(current); // 处理
+        path.pop_back(); // 从路径中移除当前节点
+    }
+}

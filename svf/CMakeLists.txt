@@ -1,9 +1,9 @@
 # Define the core library
 add_library(SvfCore
-        include/Graphs/1NNEdge.h
-        include/Graphs/1NNGraph.h
-        include/Graphs/1NNNode.h
-        lib/Graphs/1NNGraph.cpp)
+        include/Graphs/NNEdge.h
+        include/Graphs/NNGraph.h
+        include/Graphs/NNNode.h
+        lib/Graphs/NNGraph.cpp)
 
 
 # Add the public headers as an include directory
