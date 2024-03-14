@@ -24,6 +24,9 @@ std::vector<Eigen::MatrixXd> SolverEvaluate::ReLuNeuronNodeevaluate() const{
         /// Channel
         x_out.push_back(o);
     }
+    std::cout<<"***************"<<std::endl;
+    std::cout<<in_x[0].cols()<<"   "<<in_x[0].rows()<<std::endl;
+    std::cout<<x_out[0].cols()<<"   "<<x_out[0].rows()<<std::endl;
     return x_out;
 }
 
@@ -173,16 +176,19 @@ std::vector<Eigen::MatrixXd> SolverEvaluate::ConvNeuronNodeevaluate( const SVF::
     auto out_height = ((in_x[0].rows() - filter[0].get_height() + 2*padding) / stride) + 1;
     auto out_width = ((in_x[0].cols() - filter[0].get_width() + 2*padding) / stride) + 1;
 
+    std::cout<<"IMPORT FILTER NUMBER: "<<filter_num<<"  "<<out_height<<"   "<<out_width<<std::endl;
+    std::cout<<"FILTER NUMBER: "<<filter[0].get_height()<<"  "<<filter[0].get_width()<<"   "<<std::endl;
+    std::cout<<"FILTER NUMBER: "<<filter_height<<"  "<<filter_width<<"   "<<std::endl;
+    std::cout<<"MATRIX NUMBER: "<<in_x[0].rows()<<"  "<<in_x[0].cols()<<"   "<<std::endl;
+
     /// Padding
     std::vector<Eigen::MatrixXd> padded_x(in_x.size());
     for (size_t i = 0; i < in_x.size(); ++i) {
-        std::cout<<i<<std::endl;
         padded_x[i] = Eigen::MatrixXd::Zero(in_x[i].rows() + 2*padding, in_x[i].cols() + 2*padding);
         padded_x[i].block(padding, padding, in_x[i].rows(), in_x[i].cols()) = in_x[i];
     }
 
     /// Calculate the output feature map based on filling and step size
-    std::cout<<"IMPORT FILTER:"<<filter_num<<std::endl;
     std::vector<Eigen::MatrixXd> out(filter_num, Eigen::MatrixXd(out_height, out_width));
     for (int i = 0; i < filter_num; i++) {
         for (int j = 0; j < out_width; j++) {

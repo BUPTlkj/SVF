@@ -101,7 +101,10 @@ SVFNN::SVFNN(std::string adress): onnxAdress{adress}{
                     /// Refer to GEMM
                     ConvParams conf = ConvparseAndFormat(nodeDataParts[2]);
                     /// filter: filters,tmr todo dims
-                    convnode.filter = parse_filters(conf.filterValue, parseDimensions(conf.filterDims)[0], parseDimensions(conf.filterDims)[1], parseDimensions(conf.filterDims)[3],parseDimensions(conf.filterDims)[2] );
+                    std::cout<<"++++++++++++++++++++++"<<std::endl;
+
+                    std::cout<<parseDimensions(conf.filterDims)[0]<<" "<<parseDimensions(conf.filterDims)[1]<<" "<<parseDimensions(conf.filterDims)[3]<<" "<<parseDimensions(conf.filterDims)[2]<<std::endl;
+                    convnode.filter = parse_filters(conf.filterValue, parseDimensions(conf.filterDims)[0], parseDimensions(conf.filterDims)[1], parseDimensions(conf.filterDims)[2], parseDimensions(conf.filterDims)[3] );
                     convnode.conbias = parse_Convbiasvector(conf.biasValue);
                     convnode.name = name;
                     /// Add strides info
