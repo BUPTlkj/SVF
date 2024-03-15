@@ -103,6 +103,7 @@ public:
         const std::string& address, const std::string& functionName);
 
     /// 2. Parse function, return a string vector containing four parts of information
+    std::vector<int> parseDimensions(const std::string& input);
     std::vector<std::string> parseNodeData(const std::string& dataStr);
 
     std::vector<std::string> splitString(const std::string& str,

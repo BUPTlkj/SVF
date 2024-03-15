@@ -1,11 +1,12 @@
 #include "SVFONNX.h"
 #include "CheckModels.h"
 #include "algorithm" /// For std::remove
+#include "IntervalSolver.h"
 /// Parse function to extract integers from a given string and return their
 /// vectors
 
 
-std::vector<int> parseDimensions(const std::string& input) {
+std::vector<int> SVFNN::parseDimensions(const std::string& input) {
     std::vector<int> dimensions;
     std::stringstream ss(input);
     int number;
@@ -15,7 +16,6 @@ std::vector<int> parseDimensions(const std::string& input) {
         dimensions.push_back(number);
         ss >> comma; /// Read and ignore commas
     }
-
     return dimensions;
 }
 
@@ -38,7 +38,7 @@ SVFNN::SVFNN(std::string adress): onnxAdress{adress}{
 
     auto cppMapa = callPythonFunction(onnxAdress, "InteractwithCpp");
 
-/// Put it here?? Need for optimization todo
+/// Put it here?? Need for optimization
     ConstantNodeInfo constantnode;
     BasicNodeInfo basicnode;
     ParsedGEMMParams gemmnode;
@@ -100,7 +100,7 @@ SVFNN::SVFNN(std::string adress): onnxAdress{adress}{
                 }else if(name.find(Conv) != std::string::npos){
                     /// Refer to GEMM
                     ConvParams conf = ConvparseAndFormat(nodeDataParts[2]);
-                    /// filter: filters,tmr todo dims
+                    /// filter: filters
                     std::cout<<"**********"<<conf.filterDims<<std::endl<<conf.filterValue<<std::endl;
                     convnode.filter = parse_filters(conf.filterValue, parseDimensions(conf.filterDims)[0], parseDimensions(conf.filterDims)[1], parseDimensions(conf.filterDims)[2], parseDimensions(conf.filterDims)[3] );
                     convnode.conbias = parse_Convbiasvector(conf.biasValue);
@@ -266,22 +266,22 @@ std::vector<std::string> SVFNN::parseNodeData(const std::string &dataStr) {
     size_t pos = 0, startPos = 0, endPos = 0;
 
     /// Part 1: Find the first string
-    startPos = dataStr.find_first_of('\'', pos) + 1; // Skip the first quotation mark
+    startPos = dataStr.find_first_of('\'', pos) + 1; /// Skip the first quotation mark
     endPos = dataStr.find_first_of('\'', startPos);
     parts.push_back(dataStr.substr(startPos, endPos - startPos));
 
     /// Part 2: Find the first list
-    startPos = dataStr.find_first_of('[', endPos) + 1; // Skip the first [
+    startPos = dataStr.find_first_of('[', endPos) + 1; /// Skip the first [
     endPos = dataStr.find_first_of(']', startPos);
     parts.push_back(dataStr.substr(startPos, endPos - startPos));
 
     /// Part 3: Searching for a Dictionary
-    startPos = dataStr.find_first_of('{', endPos) + 1; // Skip the first {
+    startPos = dataStr.find_first_of('{', endPos) + 1; /// Skip the first {
     endPos = dataStr.find_first_of('}', startPos);
     parts.push_back(dataStr.substr(startPos, endPos - startPos));
 
     /// Part 4: Find the second list
-    startPos = dataStr.find_first_of('[', endPos + 1) + 1; // Skip the second [
+    startPos = dataStr.find_first_of('[', endPos + 1) + 1; /// Skip the second [
     endPos = dataStr.find_first_of(']', startPos);
     parts.push_back(dataStr.substr(startPos, endPos - startPos));
 
@@ -372,7 +372,7 @@ Eigen::MatrixXd SVFNN::restoreGEMMWeightToMatrix(const std::string& dimensions, 
     /// Confirm the number of values to match the size of the matrix
     if (vals.size() != rows * cols) {
         std::cerr << "Value count does not match matrix dimensions!" << std::endl;
-        return Eigen::MatrixXd(0, 0); // 返回一个空矩阵
+        return Eigen::MatrixXd(0, 0); /// Empty Matrix
     }
 
     /// Padding matrix
@@ -482,7 +482,6 @@ std::vector<SVF::FilterSubNode> SVFNN::parse_filters(const std::string &s, unsig
             }
         }
     }
-
     std::vector<SVF::FilterSubNode> filters;
     for (unsigned n = 0; n < num_filters; ++n) {
         std::vector<Eigen::MatrixXd> matrices;
@@ -497,7 +496,6 @@ std::vector<SVF::FilterSubNode> SVFNN::parse_filters(const std::string &s, unsig
         }
         filters.emplace_back(matrices);
     }
-
     return filters;
 }
 
@@ -509,7 +507,6 @@ std::vector<double> SVFNN::parse_Convbiasvector(std::string s) {
     if (s.back() == ']') {
         s.erase(s.end() - 1, s.end());
     }
-
 
     std::stringstream ss(s);
     std::string tok;
@@ -534,10 +531,8 @@ std::vector<double> SVFNN::parse_Convbiasvector(std::string s) {
     for (size_t i = 0; i < elems.size(); i++) {
         b(i) = elems[i];
     }
-
     return elems;
 }
-
 
 /// NNGraph Bulid
 class NNGraphBuilder {
@@ -615,7 +610,6 @@ public:
                 std::cout<<subNode.value[ipp]<<std::endl;
             }
         }
-
     }
 
     void operator()(const ReluNodeInfo& node) {
@@ -641,7 +635,6 @@ public:
         if (auto it = BasicOPNodeIns.find(name); it != BasicOPNodeIns.end()) return it->second;
         return std::monostate{};
     }
-
 
     SVF::NeuronNode* getNodeInstanceByName1(const std::string& name) const {
         if (auto it = ConstantNodeIns.find(name); it != ConstantNodeIns.end()) return it->second;
@@ -714,39 +707,71 @@ public:
     }
 };
 
+/////////////TEST
+
 
 int main(){
 
-//    std::string address = "/Users/liukaijie/Desktop/operation-py/convSmallRELU__Point.onnx";
-//    std::string address = "/Users/liukaijie/Desktop/operation-py/mnist_conv_maxpool.onnx";
-    std::string address = "/Users/liukaijie/Desktop/operation-py/ffnnRELU__Point_6_500.onnx";
-
-    /// parse onnx into svf-onnx
-    SVFNN svfnn(address);
-    auto nodes = svfnn.get_nodes();
-
-    /// Init nn-graph builder
-    NNGraphBuilder nngraph;
-
-    /// Init & Add node
-    for (const auto& node : nodes) {
-        std::visit(nngraph, node);
-    }
-
-    /// Init & Add Edge
-    nngraph.AddEdges();
-
-    /// Load dataset: mnist or cifa-10
+////    std::string address = "/Users/liukaijie/Desktop/operation-py/convSmallRELU__Point.onnx";
+////    std::string address = "/Users/liukaijie/Desktop/operation-py/mnist_conv_maxpool.onnx";
+//    std::string address = "/Users/liukaijie/Desktop/operation-py/ffnnRELU__Point_6_500.onnx";
+//
+//    /// parse onnx into svf-onnx
+//    SVFNN svfnn(address);
+//    auto nodes = svfnn.get_nodes();
+//
+//    /// Init nn-graph builder
+//    NNGraphBuilder nngraph;
+//
+//    /// Init & Add node
+//    for (const auto& node : nodes) {
+//        std::visit(nngraph, node);
+//    }
+//
+//    /// Init & Add Edge
+//    nngraph.AddEdges();
+//
+//    /// Load dataset: mnist or cifa-10
 //    SVF::LoadData dataset("cifar");
     SVF::LoadData dataset("mnist");
     auto x = dataset.read_dataset();
-    std::cout<<"Label: "<<x.first.front()<<std::endl;
+//    std::cout<<"Label: "<<x.first.front()<<std::endl;
+//
+//    double perti = 0.001;
+//    auto per_x = dataset.perturbateImages(x, perti);
+//
+//    /// Run abstract interpretation on NNgraph
+//    nngraph.Traversal(x.second.front());
 
-    double perti = 0.001;
-    auto per_x = dataset.perturbateImages(x, perti);
+    SVF::IntervalSolver aab(x.second.front());
+//    aab.initializeMatrix();
 
-    /// Run abstract interpretation on NNgraph
-    nngraph.Traversal(x.second.front());
+    std::vector<Eigen::MatrixXd> a;
+    Eigen::MatrixXd mat(2, 2);
+    Eigen::MatrixXd mat1(2, 2);
+    mat << 1.26, 8.32,
+        2.56, 2.89;
 
+    mat1 << 1.289, 2.564,
+            3.2, 4.98;
+    a.push_back(mat);
+    a.push_back(mat1);
+
+    // 转换
+    auto aa = aab.convertMatricesToIntervalMatrices(a);
+
+    // 打印转换结果
+    for (const auto& intervalMat : aab.interval_data_matrix) {
+        for (int i = 0; i < intervalMat.rows(); ++i) {
+            for (int j = 0; j < intervalMat.cols(); ++j) {
+                std::cout << intervalMat(i, j) << "\t";
+            }
+            std::cout << std::endl;
+        }
+        std::cout<<"****************"<<std::endl;
+    }
     return 0;
 }
+
+
+

@@ -10,7 +10,9 @@ add_executable(svf-onnx
         Solver.h
         CheckModels.cpp
         CheckModels.h
-        CheckModels.h)
+        CheckModels.h
+        IntervalSolver.cpp
+        IntervalSolver.h)
 
 message("Python INCLUDE DIR: ${Python_INCLUDE_DIRS}")
 message("Python LIB DIR: ${Python_LIBRARIES}")

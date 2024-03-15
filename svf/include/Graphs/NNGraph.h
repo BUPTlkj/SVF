@@ -4,6 +4,7 @@
 #include "NNEdge.h"
 #include "NNNode.h"
 #include <memory>
+#include "../svf-onnx/IntervalSolver.h"
 
 /// using SVF namespace graph strcture
 namespace SVF {
@@ -142,6 +143,7 @@ public:
     SVF::NeuronNode* getNeuronNodePtrFromVariant(const NeuronNodeVariant& variant);
     SVF::NeuronNodeVariant convertToVariant(SVF::NeuronNode* node);
     void DFS(std::set<const SVF::NeuronNode *> &visited, std::vector<const SVF::NeuronNode *> &path, const SVF::NeuronNodeVariant *src, const SVF::NeuronNodeVariant *dst, std::vector<Eigen::MatrixXd> in_x);
+    void IntervalDFS(std::set<const SVF::NeuronNode *> &visited, std::vector<const SVF::NeuronNode *> &path, const SVF::NeuronNodeVariant *src, const SVF::NeuronNodeVariant *dst, std::vector<Eigen::MatrixXd> in_x);
     /// Retrieve all paths (a set of strings) during graph traversal
     std::set<std::string>& getPaths(){
         return paths;

@@ -393,7 +393,7 @@ SVF::NeuronNode* GraphTraversal::getNeuronNodePtrFromVariant(const NeuronNodeVar
 }
 
 
-/// todo 3.13
+///  3.13
 /// matrix into interval
 void GraphTraversal::DFS(std::set<const SVF::NeuronNode *> &visited, std::vector<const SVF::NeuronNode *> &path, const SVF::NeuronNodeVariant *src, const SVF::NeuronNodeVariant *dst, std::vector<Eigen::MatrixXd> in_x) {
     std::stack<std::pair<SVF::NeuronNode*, std::vector<Eigen::MatrixXd>>> stack;
@@ -486,6 +486,113 @@ void GraphTraversal::DFS(std::set<const SVF::NeuronNode *> &visited, std::vector
             std::cout << "Rows: " << IRRes[j].rows() << ", Columns: " << IRRes[j].cols() << "\n";
             std::cout << IRRes[j] << "\n\n";
         }
+        visited.erase(current);
+        path.pop_back(); /// Remove current node
+    }
+}
+
+///  3.13
+/// matrix into interval
+void GraphTraversal::IntervalDFS(std::set<const SVF::NeuronNode *> &visited, std::vector<const SVF::NeuronNode *> &path, const SVF::NeuronNodeVariant *src, const SVF::NeuronNodeVariant *dst, std::vector<Eigen::MatrixXd> in_x) {
+    std::stack<std::pair<SVF::NeuronNode*, SVF::IntervalMatrix*>> stack;
+    SVF::IntervalSolver solver(in_x);
+
+    /// Ensure that src is obtained by dereferencing SVF:: NeuronNode
+    stack.emplace(getNeuronNodePtrFromVariant(*src), solver.interval_data_matrix);
+
+    int i = 0;
+    SVF::IntervalMatrix IRRes;
+
+    while (!stack.empty()) {
+        std::cout<<" Node: "<<i<<std::endl;
+        i++;
+        auto currentPair = stack.top();
+        stack.pop();
+
+        const SVF::NeuronNode* current = currentPair.first;
+
+        /// 需要重载=运算符？
+        IRRes = *currentPair.second;
+
+        std::cout<<&current<<std::endl<<" STACK SIZE: "<<stack.size()<<std::endl;
+        std::cout<<" The size of Matrix: "<<IRRes.size()<<std::endl;
+
+        if (!visited.insert(current).second) {
+            std::cout<<"CONTINUE: This Node "<<&current<<" has already been visited!"<<std::endl;
+            continue;
+        }
+
+        path.push_back(current);
+
+        if (checkNodeInVariant(current, *dst)) {
+            printPath(path);
+        }
+
+
+        for (const auto& edge : current->getOutEdges()) {
+            auto *neighbor = edge->getDstNode();
+
+            SVF::NeuronNodeVariant variantNeighbor = convertToVariant(neighbor);
+            std::cout<<"SrcNode: "<<current<<" ->  DSTNode: "<<neighbor<<" -> ConvertIns: "<<&variantNeighbor<<std::endl;
+
+            std::cout<<"NodeTYpe:  "<<neighbor->get_type()<<std::endl;
+
+            if (visited.count(neighbor) == 0) {
+                /// Process IRRes based on the type of neighbor
+                SVF::IntervalMatrix newIRRes; /// Copy the current IRRes to avoid modifying the original data
+                if (neighbor->get_type() == 0) {
+                    solver.setIRMatrix(IRRes);
+                    newIRRes = solver.ReLuNeuronNodeevaluate();
+                    std::cout<<"FINISH RELU"<<std::endl;
+                } else if (neighbor->get_type() == 1 || neighbor->get_type() == 6 || neighbor->get_type() == 7 || neighbor->get_type() == 8 || neighbor->get_type() == 9) {
+                    const SVF::BasicOPNeuronNode *node = SVFUtil::dyn_cast<SVF::BasicOPNeuronNode>(neighbor);
+                    solver.setIRMatrix(IRRes);
+                    newIRRes = solver.BasicOPNeuronNodeevaluate(node);
+                    std::cout<<"FINISH BAIC"<<std::endl;
+                } else if (neighbor->get_type() == 2) {
+                    const SVF::MaxPoolNeuronNode *node = SVFUtil::dyn_cast<SVF::MaxPoolNeuronNode>(neighbor);
+                    solver.setIRMatrix(IRRes);
+                    newIRRes = solver.MaxPoolNeuronNodeevaluate(node);
+                    std::cout<<"FINISH MAXPOOLING"<<std::endl;
+                } else if (neighbor->get_type() == 3) {
+                    const SVF::ConvNeuronNode *node = static_cast<SVF::ConvNeuronNode *>(neighbor);
+                    solver.setIRMatrix(IRRes);
+                    newIRRes = solver.ConvNeuronNodeevaluate(node);
+                    std::cout<<"FINISH Conv"<<std::endl;
+                } else if (neighbor->get_type() == 4) {
+                    const SVF::FullyConNeuronNode *node = SVFUtil::dyn_cast<SVF::FullyConNeuronNode>(neighbor);
+                    solver.setIRMatrix(IRRes);
+                    std::cout<<"*******************"<<std::endl;
+                    newIRRes = solver.FullyConNeuronNodeevaluate(node);
+                    std::cout<<"FINISH FullyConnected"<<std::endl;
+                } else if (neighbor->get_type() == 5) {
+                    solver.setIRMatrix(IRRes);
+                    newIRRes = solver.ConstantNeuronNodeevaluate();
+                    std::cout<<"FINISH Constant"<<std::endl;
+                }
+                /// Push neighbor and new IRRes into the stack
+                IRRes = newIRRes;
+                stack.emplace(neighbor, newIRRes);
+                std::cout<<"FINISH PUSHING STACK! "<<stack.size()<<std::endl<<std::endl;
+            }
+        }
+
+        /// print the IRRes Matrix
+        std::cout << "IRRes content after the loop iteration:" << i << std::endl;
+        std::cout.precision(20);
+        std::cout << std::fixed;
+        for (const auto& intervalMat : IRRes) {
+            std::cout << "IntervalMatrix :\n";
+            std::cout << "Rows: " << intervalMat.rows() << ", Columns: " << intervalMat.cols() << "\n";
+            for (int k = 0; k < intervalMat.rows(); ++k) {
+                for (int j = 0; j < intervalMat.cols(); ++j) {
+                    std::cout << intervalMat(k, j) << "\t";
+                }
+                std::cout << std::endl;
+            }
+            std::cout<<"****************"<<std::endl;
+        }
+
         visited.erase(current);
         path.pop_back(); /// Remove current node
     }

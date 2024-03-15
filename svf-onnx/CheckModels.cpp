@@ -100,22 +100,16 @@ std::pair<SVF::LabelVector, SVF::MatrixVector_3c> SVF::LoadData::read_dataset(){
     return std::make_pair(labels, matrixes_3c);
 }
 
-
-
 std::vector<SVF::LabelAndBounds> SVF::LoadData::perturbateImages(
     const std::pair<SVF::LabelVector, SVF::MatrixVector_3c>& labelImagePairs,
     double eps) {
 
-    //存放扰动结果
     std::vector<SVF::LabelAndBounds> result;
 
     for (size_t i = 0; i < labelImagePairs.first.size(); ++i) {
-        // 标签
         signed label = labelImagePairs.first[i];
-        // 像素矩阵
         const std::vector<Eigen::MatrixXd>& originalMatrix = labelImagePairs.second[i];
 
-        //添加扰动
         std::vector<Eigen::MatrixXd> matrix_lb;
         std::vector<Eigen::MatrixXd> matrix_ub;
 
@@ -132,6 +126,5 @@ std::vector<SVF::LabelAndBounds> SVF::LoadData::perturbateImages(
 
         result.push_back({label, matrix_lb, matrix_ub});
     }
-    // 构成待验证的上下界
     return result;
 }
