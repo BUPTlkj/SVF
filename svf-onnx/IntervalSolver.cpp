@@ -15,7 +15,7 @@ bool isInt(T&& var) {
 typedef Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic> myMatrixXd;
 
 void IntervalSolver::initializeMatrix() {
-    Eigen::Matrix<SVF::IntervalValue, 2, 2> matrix;
+    Eigen::Matrix<SVF::IntervalValue, Eigen::Dynamic, Eigen::Dynamic> matrix;
     matrix(0,0) = SVF::IntervalValue(2.1, 2.1);
     matrix(0,1) = SVF::IntervalValue(0,0);
     matrix(1,0) = SVF::IntervalValue(0,0);
@@ -23,24 +23,37 @@ void IntervalSolver::initializeMatrix() {
 
     SVF::IntervalValue inv(0.34, 1.45);
 
-    Eigen::Matrix<SVF::IntervalValue, 2, 2> a;
+    Eigen::Matrix<SVF::IntervalValue, Eigen::Dynamic, Eigen::Dynamic> a;
     a(0,0) = inv;
     a(0,1) = inv + inv;
     a(1,0) = inv ;
     a(1,1) = inv;
 
-    Eigen::Matrix<SVF::IntervalValue, 2, 2>  c = a * matrix;
+    Eigen::Matrix<SVF::IntervalValue, Eigen::Dynamic, Eigen::Dynamic> Matrix4 = matrix * a;
 
+    Eigen::Matrix<SVF::IntervalValue, Eigen::Dynamic, Eigen::Dynamic> Matrix1;
+    Eigen::Matrix<SVF::IntervalValue, Eigen::Dynamic, Eigen::Dynamic> Matrix2;
+    Eigen::Matrix<SVF::IntervalValue, 2, 2> Matrix3;
+//    Eigen::Matrix<SVF::IntervalValue, Eigen::Dynamic, Eigen::Dynamic> Matrix4 = Matrix1 * Matrix2;
+
+    Eigen::Matrix<SVF::IntervalValue, Eigen::Dynamic, Eigen::Dynamic> Matrix6 = Matrix1 * Matrix3;
+
+    Eigen::Matrix<SVF::IntervalValue, Eigen::Dynamic, Eigen::Dynamic> Matrix5 = Matrix1 + Matrix2;
+
+
+    Eigen::Matrix<SVF::IntervalValue, Eigen::Dynamic,  Eigen::Dynamic>  c = a * matrix + a;
     for (int i = 0; i < c.rows(); ++i) {
         for (int j = 0; j < c.cols(); ++j) {
-            std::cout << a(i,j).toString() << "\t";
+            std::cout <<"[" << a(i,j).lb().getRealNumeral() << ", "  << a(i,j).ub().getRealNumeral()<< "]\t";
+            std::cout << a(i,j).toString()<< "]\t";
         }
         std::cout << std::endl;
     }
 
     for (int i = 0; i < c.rows(); ++i) {
         for (int j = 0; j < c.cols(); ++j) {
-            std::cout << c(i,j).toString() << "\t";
+            std::cout <<"[" << c(i,j).lb().getRealNumeral() << ", "  << c(i,j).ub().getRealNumeral()<< "]\t";
+//            std::cout << c(i,j).toString() << "\t";
         }
         std::cout << std::endl;
     }
@@ -54,7 +67,7 @@ IntervalMatrix IntervalSolver::convertMatricesToIntervalMatrices(const std::vect
         for (int i = 0; i < mat.rows(); ++i) {
             for (int j = 0; j < mat.cols(); ++j) {
                 // 对于每个元素x，创建一个区间[x, x]
-                std::cout<<"Matrix: ("<<i<<", "<<j<<") :  "<<mat(i,j)<<" Is double? "<<isDouble(mat(i,j))<<std::endl;
+//                std::cout<<"Matrix: ("<<i<<", "<<j<<") :  "<<mat(i,j)<<" Is double? "<<isDouble(mat(i,j))<<std::endl;
                 intervalMatrix(i, j) = SVF::IntervalValue(mat(i, j), mat(i, j));
 //                intervalMatrix(i, j) = SVF::IntervalValue(static_cast<double>(mat(i, j)), static_cast<double>(mat(i, j)));
             }
@@ -70,25 +83,12 @@ IntervalEigen IntervalSolver::convertEigenToIntervalEigen(const Eigen::MatrixXd&
     for (int i = 0; i < matrix.rows(); ++i) {
         for (int j = 0; j < matrix.cols(); ++j) {
             // 对于每个元素x，创建一个区间[x, x]
-            std::cout<<"Matrix: ("<<i<<", "<<j<<") :  "<<matrix(i,j)<<" Is double? "<<isDouble(matrix(i,j))<<std::endl;
+//            std::cout<<"Matrix: ("<<i<<", "<<j<<") :  "<<matrix(i,j)<<" Is double? "<<isDouble(matrix(i,j))<<std::endl;
             intervalMatrix(i, j) = SVF::IntervalValue(matrix(i, j), matrix(i, j));
         }
     }
     return intervalMatrix;
 }
-
-//IntervalVector IntervalSolver::convertVectorXdToIntervalVector(const Eigen::VectorXd& vec) {
-//    // 创建一个具有相同大小的IntervalVector
-//    IntervalVector intervalVec(vec.size());
-//
-//    // 遍历VectorXd中的每个元素
-//    for (int i = 0; i < vec.size(); ++i) {
-//        // 将每个double值转换为一个具有相同上下界的IntervalValue
-//        intervalVec(i) = SVF::IntervalValue(vec(i), vec(i)); // 假设IntervalValue有一个接受两个double的构造函数
-//    }
-//
-//    return intervalVec;
-//}
 
 IntervalEigen IntervalSolver::convertVectorXdToIntervalVector(const Eigen::VectorXd& vec) {
     // 创建一个具有相同行数的IntervalEigen，列数为1
@@ -294,8 +294,11 @@ SVF::IntervalMatrix SVF::IntervalSolver::FullyConNeuronNodeevaluate( const SVF::
     u32_t out_height = Intervalbias.size();
     u32_t out_depth = 1;
 
-    Eigen::VectorXd ser(in_depth * in_height * in_width);
-    IntervalEigen x_ser =convertVectorXdToIntervalVector(ser);
+    const u32_t rowsize = in_depth * in_height * in_width;
+//    const u32_t rowsize = 32;
+//    Eigen::Matrix<IntervalValue, Eigen::Dynamic, 1> x_ser(rowsize);
+    Eigen::Matrix<IntervalValue, Eigen::Dynamic, Eigen::Dynamic> x_ser;
+
     for (u32_t i = 0; i < in_depth; i++) {
         for (u32_t j = 0; j < in_height; j++) {
             for (u32_t k = 0; k < in_width; k++) {
@@ -305,70 +308,73 @@ SVF::IntervalMatrix SVF::IntervalSolver::FullyConNeuronNodeevaluate( const SVF::
     }
 
     ///wx+b
-    IntervalEigen val = Intervalweight * x_ser + Intervalbias;
+//    Eigen::Matrix<IntervalValue, Eigen::Dynamic, 1>;
+    Eigen::Matrix<IntervalValue, Eigen::Dynamic, Eigen::Dynamic> val = Intervalweight * x_ser + Intervalbias;
+//    Eigen::Matrix<SVF::IntervalValue, Eigen::Dynamic, Eigen::Dynamic> temp;
+//    Eigen::Matrix<SVF::IntervalValue, Eigen::Dynamic, Eigen::Dynamic> temp1;
+//    Eigen::Matrix<SVF::IntervalValue, Eigen::Dynamic, Eigen::Dynamic> aa = temp * temp1;
 
     /// Restore output
     IntervalMatrix out;
 
     /// Assignment
     for (u32_t i = 0; i < out_depth; i++) {
-        out.push_back(convertEigenToIntervalEigen(Eigen::MatrixXd(out_height, out_width)));
+        out.push_back(Eigen::Matrix<IntervalValue, Eigen::Dynamic, Eigen::Dynamic>(out_height, out_width));
         for (u32_t j = 0; j < out_height; j++) {
             for (u32_t k = 0; k < out_width; k++) {
-                u32_t index = out_width * out_depth * j + out_depth * k + i;
-                out[i](j, k) = val(index, 0);
+                out[i](j, k) = val(out_width * out_depth * j + out_depth * k + i,0);
             }
         }
     }
     return val;
 }
 
-SVF::IntervalMatrix SVF::IntervalSolver::ConvNeuronNodeevaluate( const SVF::ConvNeuronNode *conv) const{
-    std::cout<<"ConvNodeing......"<<conv->getId()<<std::endl;
-
-    unsigned filter_num = conv->get_filter_num();
-    auto stride = conv->get_stride();
-    auto padding = conv->get_padding();
-    auto filter = conv->get_filter();
-    auto filter_depth = conv->get_filter_depth();
-    auto filter_height = conv->get_filter_height();
-    auto filter_width = conv->get_filter_width();
-    auto bias = conv->get_bias();
-    auto out_height = ((in_x[0].rows() - filter[0].get_height() + 2*padding) / stride) + 1;
-    auto out_width = ((in_x[0].cols() - filter[0].get_width() + 2*padding) / stride) + 1;
-
-    /// Padding
-    std::vector<Eigen::MatrixXd> padded_x(in_x.size());
-    for (size_t i = 0; i < in_x.size(); ++i) {
-        padded_x[i] = Eigen::MatrixXd::Zero(in_x[i].rows() + 2*padding, in_x[i].cols() + 2*padding);
-        padded_x[i].block(padding, padding, in_x[i].rows(), in_x[i].cols()) = in_x[i];
-    }
-
-    /// Calculate the output feature map based on filling and step size
-    std::vector<Eigen::MatrixXd> out(filter_num, Eigen::MatrixXd(out_height, out_width));
-    for (int i = 0; i < filter_num; i++) {
-        for (int j = 0; j < out_width; j++) {
-            for (int k = 0; k < out_height; k++) {
-                double sum = 0;
-                for (int i_ = 0; i_ < filter_depth; i_++) {
-                    for (int j_ = 0; j_ < filter_height; j_++) {
-                        for (int k_ = 0; k_ < filter_width; k_++) {
-                            /// Strides
-                            int row = k * stride + j_;
-                            int col = j * stride + k_;
-                            if (row < padded_x[i_].rows() && col < padded_x[i_].cols()) {
-                                sum += filter[i].value[i_](j_, k_) * padded_x[i_](row, col);
-                            }
-                        }
-                    }
-                }
-                /// Calculate the output at the current position and add a bias
-                out[i](k, j) = sum + bias[i];
-            }
-        }
-    }
-    return out;
-}
+//SVF::IntervalMatrix SVF::IntervalSolver::ConvNeuronNodeevaluate( const SVF::ConvNeuronNode *conv) const{
+//    std::cout<<"ConvNodeing......"<<conv->getId()<<std::endl;
+//
+//    unsigned filter_num = conv->get_filter_num();
+//    auto stride = conv->get_stride();
+//    auto padding = conv->get_padding();
+//    auto filter = conv->get_filter();
+//    auto filter_depth = conv->get_filter_depth();
+//    auto filter_height = conv->get_filter_height();
+//    auto filter_width = conv->get_filter_width();
+//    auto bias = conv->get_bias();
+//    auto out_height = ((in_x[0].rows() - filter[0].get_height() + 2*padding) / stride) + 1;
+//    auto out_width = ((in_x[0].cols() - filter[0].get_width() + 2*padding) / stride) + 1;
+//
+//    /// Padding
+//    std::vector<Eigen::MatrixXd> padded_x(in_x.size());
+//    for (size_t i = 0; i < in_x.size(); ++i) {
+//        padded_x[i] = Eigen::MatrixXd::Zero(in_x[i].rows() + 2*padding, in_x[i].cols() + 2*padding);
+//        padded_x[i].block(padding, padding, in_x[i].rows(), in_x[i].cols()) = in_x[i];
+//    }
+//
+//    /// Calculate the output feature map based on filling and step size
+//    std::vector<Eigen::MatrixXd> out(filter_num, Eigen::MatrixXd(out_height, out_width));
+//    for (int i = 0; i < filter_num; i++) {
+//        for (int j = 0; j < out_width; j++) {
+//            for (int k = 0; k < out_height; k++) {
+//                double sum = 0;
+//                for (int i_ = 0; i_ < filter_depth; i_++) {
+//                    for (int j_ = 0; j_ < filter_height; j_++) {
+//                        for (int k_ = 0; k_ < filter_width; k_++) {
+//                            /// Strides
+//                            int row = k * stride + j_;
+//                            int col = j * stride + k_;
+//                            if (row < padded_x[i_].rows() && col < padded_x[i_].cols()) {
+//                                sum += filter[i].value[i_](j_, k_) * padded_x[i_](row, col);
+//                            }
+//                        }
+//                    }
+//                }
+//                /// Calculate the output at the current position and add a bias
+//                out[i](k, j) = sum + bias[i];
+//            }
+//        }
+//    }
+//    return out;
+//}
 
 SVF::IntervalMatrix SVF::IntervalSolver::ConstantNeuronNodeevaluate() const{
     std::cout<<"Constanting......."<<std::endl;

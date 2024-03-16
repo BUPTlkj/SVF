@@ -28,7 +28,6 @@ class IntervalSolver
 {
 public:
 
-    Eigen::VectorXd<SVF::IntervalValue, Eigen::Dynamic> aa;
     /// 输入的像素矩阵
     std::vector<Eigen::MatrixXd> data_matrix;
     /// 转化为Interval的像素矩阵

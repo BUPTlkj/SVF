@@ -525,6 +525,25 @@ inline IntervalValue operator+(const IntervalValue &lhs,
     }
 }
 
+
+/// Add IntervalValues
+//inline IntervalValue& operator+=(const IntervalValue &rhs)
+//{
+//
+////    return *this;
+//}
+
+inline IntervalValue& operator+=(const IntervalValue& rhs) {
+    if (this->isBottom() || rhs.isBottom()) {
+        *this = bottom();
+    } else if (this->isTop() || rhs.isTop()) {
+        *this = top();
+    } else {
+        *this = IntervalValue(this->lb() + rhs.lb(), this->ub() + rhs.ub());
+    }
+    return *this;
+}
+
 /// Subtract IntervalValues
 inline IntervalValue operator-(const IntervalValue &lhs,
                                const IntervalValue &rhs)

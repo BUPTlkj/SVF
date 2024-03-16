@@ -132,9 +132,13 @@ message(STATUS "Z3 STATUS:
 link_libraries(${Z3_LIBRARIES})
 include_directories(SYSTEM ${Z3_INCLUDES})
 
+set(EIGEN_HOME ${CMAKE_SOURCE_DIR}/ext_include)
+include_directories(${EIGEN_HOME})
+
 # Add the actual SVF and SVF-LLVM targets
 add_subdirectory(svf)
 add_subdirectory(svf-llvm)
+add_subdirectory(svf-onnx)
 
 # Whether RTTI/Exceptions are enabled currently depends on whether the LLVM instance used to build
 # SVF had them enabled; since the LLVM instance is found in the "svf-llvm" subdirectory, it sets the

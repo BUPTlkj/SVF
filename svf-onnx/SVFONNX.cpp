@@ -1,6 +1,6 @@
 #include "SVFONNX.h"
 #include "CheckModels.h"
-#include "algorithm" /// For std::remove
+#include <algorithm> /// For std::remove
 #include "IntervalSolver.h"
 /// Parse function to extract integers from a given string and return their
 /// vectors
@@ -713,7 +713,7 @@ public:
 int main(){
 
 ////    std::string address = "/Users/liukaijie/Desktop/operation-py/convSmallRELU__Point.onnx";
-////    std::string address = "/Users/liukaijie/Desktop/operation-py/mnist_conv_maxpool.onnx";
+//////    std::string address = "/Users/liukaijie/Desktop/operation-py/mnist_conv_maxpool.onnx";
 //    std::string address = "/Users/liukaijie/Desktop/operation-py/ffnnRELU__Point_6_500.onnx";
 //
 //    /// parse onnx into svf-onnx
@@ -730,8 +730,8 @@ int main(){
 //
 //    /// Init & Add Edge
 //    nngraph.AddEdges();
-//
-//    /// Load dataset: mnist or cifa-10
+
+    /// Load dataset: mnist or cifa-10
 //    SVF::LoadData dataset("cifar");
     SVF::LoadData dataset("mnist");
     auto x = dataset.read_dataset();
@@ -740,37 +740,37 @@ int main(){
 //    double perti = 0.001;
 //    auto per_x = dataset.perturbateImages(x, perti);
 //
-//    /// Run abstract interpretation on NNgraph
+    /// Run abstract interpretation on NNgraph
 //    nngraph.Traversal(x.second.front());
-
+//
     SVF::IntervalSolver aab(x.second.front());
-//    aab.initializeMatrix();
-
-    std::vector<Eigen::MatrixXd> a;
-    Eigen::MatrixXd mat(2, 2);
-    Eigen::MatrixXd mat1(2, 2);
-    mat << 1.26, 8.32,
-        2.56, 2.89;
-
-    mat1 << 1.289, 2.564,
-            3.2, 4.98;
-    a.push_back(mat);
-    a.push_back(mat1);
-
-    // 转换
-    auto aa = aab.convertMatricesToIntervalMatrices(a);
-
-    // 打印转换结果
-    for (const auto& intervalMat : aab.interval_data_matrix) {
-        for (int i = 0; i < intervalMat.rows(); ++i) {
-            for (int j = 0; j < intervalMat.cols(); ++j) {
-                std::cout << intervalMat(i, j) << "\t";
-            }
-            std::cout << std::endl;
-        }
-        std::cout<<"****************"<<std::endl;
-    }
-    return 0;
+    aab.initializeMatrix();
+//
+//    std::vector<Eigen::MatrixXd> a;
+//    Eigen::MatrixXd mat(2, 2);
+//    Eigen::MatrixXd mat1(2, 2);
+//    mat << 1.26, 8.32,
+//        2.56, 2.89;
+//
+//    mat1 << 1.289, 2.564,
+//            3.2, 4.98;
+//    a.push_back(mat);
+//    a.push_back(mat1);
+//
+//    // 转换
+//    auto aa = aab.convertMatricesToIntervalMatrices(a);
+//
+//    // 打印转换结果
+//    for (const auto& intervalMat : aab.interval_data_matrix) {
+//        for (int i = 0; i < intervalMat.rows(); ++i) {
+//            for (int j = 0; j < intervalMat.cols(); ++j) {
+//                std::cout << intervalMat(i, j) << "\t";
+//            }
+//            std::cout << std::endl;
+//        }
+//        std::cout<<"****************"<<std::endl;
+//    }
+//    return 0;
 }
 
 
