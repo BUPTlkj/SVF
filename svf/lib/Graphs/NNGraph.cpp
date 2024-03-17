@@ -502,6 +502,7 @@ void GraphTraversal::IntervalDFS(std::set<const NeuronNode *> &visited, std::vec
 
     int i = 0;
     IntervalMatrices IRRes;
+    IntervalMatrices newIRRes; /// Copy the current IRRes to avoid modifying the original data
 
     while (!stack.empty()) {
         std::cout<<" Node: "<<i<<std::endl;
@@ -513,6 +514,7 @@ void GraphTraversal::IntervalDFS(std::set<const NeuronNode *> &visited, std::vec
 
         /// 需要重载=运算符？
         IRRes = *currentPair.second;
+        std::cout<<"*******IRRes:"<<IRRes.size()<<", "<<IRRes[0].rows()<<", "<<IRRes[0].cols()<<std::endl;
 
         std::cout<<&current<<std::endl<<" STACK SIZE: "<<stack.size()<<std::endl;
         std::cout<<" The size of Matrix: "<<IRRes.size()<<std::endl;
@@ -528,7 +530,6 @@ void GraphTraversal::IntervalDFS(std::set<const NeuronNode *> &visited, std::vec
             printPath(path);
         }
 
-
         for (const auto& edge : current->getOutEdges()) {
             auto *neighbor = edge->getDstNode();
 
@@ -539,54 +540,55 @@ void GraphTraversal::IntervalDFS(std::set<const NeuronNode *> &visited, std::vec
 
             if (visited.count(neighbor) == 0) {
                 /// Process IRRes based on the type of neighbor
-                IntervalMatrices newIRRes; /// Copy the current IRRes to avoid modifying the original data
                 if (neighbor->get_type() == 0) {
                     solver.setIRMatrix(IRRes);
                     newIRRes = solver.ReLuNeuronNodeevaluate();
-                    std::cout<<"FINISH RELU"<<std::endl;
+                    std::cout<<"FINISH RELU, The Result size:  ("<<newIRRes.size()<<", "<<newIRRes[0].rows()<<", "<<newIRRes[0].cols()<<")"<<std::endl;
                 } else if (neighbor->get_type() == 1 || neighbor->get_type() == 6 || neighbor->get_type() == 7 || neighbor->get_type() == 8 || neighbor->get_type() == 9) {
                     const BasicOPNeuronNode *node = SVFUtil::dyn_cast<BasicOPNeuronNode>(neighbor);
                     solver.setIRMatrix(IRRes);
                     newIRRes = solver.BasicOPNeuronNodeevaluate(node);
-                    std::cout<<"FINISH BAIC"<<std::endl;
+                    std::cout<<"FINISH BAIC, The Result size: ("<<newIRRes.size()<<", "<<newIRRes[0].rows()<<", "<<newIRRes[0].cols()<<")"<<std::endl;
                 } else if (neighbor->get_type() == 2) {
                     const MaxPoolNeuronNode *node = SVFUtil::dyn_cast<MaxPoolNeuronNode>(neighbor);
                     solver.setIRMatrix(IRRes);
                     newIRRes = solver.MaxPoolNeuronNodeevaluate(node);
-                    std::cout<<"FINISH MAXPOOLING"<<std::endl;
+                    std::cout<<"FINISH MAXPOOLING, The Result size: ("<<newIRRes.size()<<", "<<newIRRes[0].rows()<<", "<<newIRRes[0].cols()<<")"<<std::endl;
                 } else if (neighbor->get_type() == 3) {
                     const ConvNeuronNode *node = static_cast<ConvNeuronNode *>(neighbor);
                     solver.setIRMatrix(IRRes);
                     newIRRes = solver.ConvNeuronNodeevaluate(node);
-                    std::cout<<"FINISH Conv"<<std::endl;
+                    std::cout<<"FINISH Conv, The Result size: ("<<newIRRes.size()<<", "<<newIRRes[0].rows()<<", "<<newIRRes[0].cols()<<")"<<std::endl;
                 } else if (neighbor->get_type() == 4) {
                     const FullyConNeuronNode *node = SVFUtil::dyn_cast<FullyConNeuronNode>(neighbor);
                     solver.setIRMatrix(IRRes);
                     std::cout<<"*******************"<<std::endl;
                     newIRRes = solver.FullyConNeuronNodeevaluate(node);
-                    std::cout<<"FINISH FullyConnected"<<std::endl;
+                    std::cout<<"FINISH FullyConnected, The Result size: ("<<newIRRes.size()<<", "<<newIRRes[0].rows()<<", "<<newIRRes[0].cols()<<")"<<std::endl;
                 } else if (neighbor->get_type() == 5) {
                     solver.setIRMatrix(IRRes);
                     newIRRes = solver.ConstantNeuronNodeevaluate();
-                    std::cout<<"FINISH Constant"<<std::endl;
+                    std::cout<<"FINISH Constant, The Result size: ("<<newIRRes.size()<<", "<<newIRRes[0].rows()<<", "<<newIRRes[0].cols()<<")"<<std::endl;
                 }
                 /// Push neighbor and new IRRes into the stack
                 IRRes = newIRRes;
+                std::cout<<"Ready to push: "<<newIRRes.size()<<", "<<newIRRes[0].rows()<<", "<<newIRRes[0].cols()<<")"<<std::endl;
                 stack.emplace(neighbor, &newIRRes);
-                std::cout<<"FINISH PUSHING STACK! "<<stack.size()<<std::endl<<std::endl;
+                std::cout<<"FINISH PUSHING STACK! "<<stack.size()<< ",    Number of Intervalmatrix: " << newIRRes.size() <<std::endl<<std::endl;
             }
         }
 
         /// print the IRRes Matrix
-        std::cout << "IRRes content after the loop iteration:" << i << std::endl;
+        std::cout << "IRRes content after the loop iteration:" << i << ",    Number of Intervalmatrix: " << IRRes.size() <<std::endl;
         std::cout.precision(20);
         std::cout << std::fixed;
+//        for(u32_t ii = 0; ii<IRRes.size(); ii++){
         for (const auto& intervalMat : IRRes) {
             std::cout << "IntervalMatrix :\n";
             std::cout << "Rows: " << intervalMat.rows() << ", Columns: " << intervalMat.cols() << "\n";
             for (int k = 0; k < intervalMat.rows(); ++k) {
                 for (int j = 0; j < intervalMat.cols(); ++j) {
-                    std::cout << intervalMat(k, j) << "\t";
+                    std::cout<< "[ "<< intervalMat(k, j).lb().getRealNumeral()<<", "<< intervalMat(k, j).ub().getRealNumeral() <<" ]"<< "\t";
                 }
                 std::cout << std::endl;
             }

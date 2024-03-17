@@ -57,6 +57,8 @@ public:
     inline void setIRMatrix(IntervalMatrices x)
     {
         in_x = x;
+        std::cout<<"COPYING X to IN_X: x("<<x.size()<<", "<<x[0].rows()<<", "<<x[0].cols()<<")"<<std::endl;
+        std::cout<<"COPYING X to IN_X: in_x("<<in_x.size()<<", "<<in_x[0].rows()<<", "<<in_x[0].cols()<<")"<<std::endl;
     }
 
     IntervalMatrices ReLuNeuronNodeevaluate() const;
@@ -73,7 +75,7 @@ public:
     IntervalMatrices ConvNeuronNodeevaluate(
         const ConvNeuronNode* conv);
 
-    IntervalMatrices ConstantNeuronNodeevaluate() const;
+    IntervalMatrices ConstantNeuronNodeevaluate();
 
     /// 解析分析最后的输出值
     //  todo

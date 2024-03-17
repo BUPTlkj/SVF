@@ -181,8 +181,8 @@ IntervalMatrices IntervalSolver::ReLuNeuronNodeevaluate() const {
     IntervalMatrices x_out;
     for (const auto& mat : in_x) { // 直接使用auto&避免拷贝
         Eigen::Matrix<IntervalValue, Eigen::Dynamic, Eigen::Dynamic> o(mat.rows(), mat.cols());
-        for (int i = 0; i < mat.rows(); i++) {
-            for (int j = 0; j < mat.cols(); j++) {
+        for (u32_t i = 0; i < mat.rows(); i++) {
+            for (u32_t j = 0; j < mat.cols(); j++) {
                 const auto& iv = mat(i, j); // 获取当前区间
                 double lb = iv.lb().getNumeral(); // 获取区间下界
                 double ub = iv.ub().getNumeral(); // 获取区间上界
@@ -202,7 +202,7 @@ IntervalMatrices IntervalSolver::ReLuNeuronNodeevaluate() const {
 
 
 IntervalMatrices IntervalSolver::BasicOPNeuronNodeevaluate( const BasicOPNeuronNode *basic){
-    std::cout<<"BasicNoding......"<<std::endl;
+    std::cout<<"BasicNoding...... The input size: "<<in_x.size()<<std::endl;
 
 
     IntervalMatrices result;
@@ -214,6 +214,7 @@ IntervalMatrices IntervalSolver::BasicOPNeuronNodeevaluate( const BasicOPNeuronN
     auto Intervalconstant = convertMatricesToIntervalMatrices(constant);
 
     if (in_x.size() != Intervalconstant.size()) {
+        std::cout<<"In_x.size(): "<<in_x.size()<<",  "<<"Intervalconstant.size()): "<<Intervalconstant.size()<<std::endl;
         std::cerr << "Error: The matrix of channels must be the same." << std::endl;
         return result;
     }
@@ -249,6 +250,7 @@ IntervalMatrices IntervalSolver::BasicOPNeuronNodeevaluate( const BasicOPNeuronN
             }
         }
     }
+    std::cout<<"The result matrix: ("<<result.size()<<", "<<result[0].rows()<<", "<<result[0].cols()<<") "<<std::endl;
     return result;
 }
 
@@ -431,8 +433,8 @@ IntervalMatrices IntervalSolver::ConvNeuronNodeevaluate( const ConvNeuronNode *c
     return out;
 }
 
-IntervalMatrices IntervalSolver::ConstantNeuronNodeevaluate() const{
-    std::cout<<"Constanting......."<<std::endl;
+IntervalMatrices IntervalSolver::ConstantNeuronNodeevaluate(){
+    std::cout<<"Constanting....... The input size: ("<<in_x.size()<<", "<<in_x[0].rows()<<", "<<in_x[0].cols()<<")"<<std::endl;
     /// This is an entry, nothing needs to do.
     return in_x;
 }
