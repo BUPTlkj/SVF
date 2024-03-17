@@ -1,5 +1,6 @@
 #include "Solver.h"
 
+using namespace SVF;
 
 std::vector<Eigen::MatrixXd> SolverEvaluate::ReLuNeuronNodeevaluate() const{
     std::cout<<"Reluing....."<<std::endl;
@@ -20,7 +21,7 @@ std::vector<Eigen::MatrixXd> SolverEvaluate::ReLuNeuronNodeevaluate() const{
     return x_out;
 }
 
-std::vector<Eigen::MatrixXd> SolverEvaluate::BasicOPNeuronNodeevaluate( const SVF::BasicOPNeuronNode *basic) const{
+std::vector<Eigen::MatrixXd> SolverEvaluate::BasicOPNeuronNodeevaluate( const BasicOPNeuronNode *basic) const{
     std::cout<<"BasicNoding......"<<std::endl;
 
 
@@ -65,7 +66,7 @@ std::vector<Eigen::MatrixXd> SolverEvaluate::BasicOPNeuronNodeevaluate( const SV
     return result;
 }
 
-std::vector<Eigen::MatrixXd> SolverEvaluate::MaxPoolNeuronNodeevaluate( const SVF::MaxPoolNeuronNode *maxpool) const{
+std::vector<Eigen::MatrixXd> SolverEvaluate::MaxPoolNeuronNodeevaluate( const MaxPoolNeuronNode *maxpool) const{
     std::cout<<"Maxpooling....."<<std::endl;
     std::vector<Eigen::MatrixXd> out_x;
     auto in_height = in_x[0].rows();
@@ -110,7 +111,7 @@ std::vector<Eigen::MatrixXd> SolverEvaluate::MaxPoolNeuronNodeevaluate( const SV
     return out_x;
 }
 
-std::vector<Eigen::MatrixXd> SolverEvaluate::FullyConNeuronNodeevaluate( const SVF::FullyConNeuronNode *fully) const{
+std::vector<Eigen::MatrixXd> SolverEvaluate::FullyConNeuronNodeevaluate( const FullyConNeuronNode *fully) const{
     std::cout<<"FullyConing......"<<std::endl;
     /// The step of processing input flattening operation is equivalent to the GEMM node operation in ONNX
     auto in_depth = in_x.size();
@@ -150,7 +151,7 @@ std::vector<Eigen::MatrixXd> SolverEvaluate::FullyConNeuronNodeevaluate( const S
     return out;
 }
 
-std::vector<Eigen::MatrixXd> SolverEvaluate::ConvNeuronNodeevaluate( const SVF::ConvNeuronNode *conv) const{
+std::vector<Eigen::MatrixXd> SolverEvaluate::ConvNeuronNodeevaluate( const ConvNeuronNode *conv) const{
     std::cout<<"ConvNodeing......"<<conv->getId()<<std::endl;
 
     unsigned filter_num = conv->get_filter_num();

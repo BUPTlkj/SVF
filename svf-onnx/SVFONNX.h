@@ -11,6 +11,9 @@
 #include <sstream>
 #include <string>
 
+namespace SVF
+{
+
 /// Conv Node todo maybe can be more concise
 struct ConvParams
 {
@@ -55,10 +58,10 @@ struct ParsedGEMMParams
 struct ConvNodeInfo
 {
     std::string name;
-    std::vector<SVF::FilterSubNode> filter;
+    std::vector<FilterSubNode> filter;
     std::vector<double> conbias;
-    std::pair<unsigned , unsigned > strides;
-    std::pair<unsigned , unsigned > pads;
+    std::pair<unsigned, unsigned> strides;
+    std::pair<unsigned, unsigned> pads;
 };
 
 /// ReLu
@@ -80,7 +83,6 @@ struct MaxPoolNodeInfo
 using SVFNeuralNet =
     std::variant<ConstantNodeInfo, BasicNodeInfo, ParsedGEMMParams,
                  ConvNodeInfo, ReluNodeInfo, MaxPoolNodeInfo>;
-
 
 class SVFNN
 {
@@ -135,7 +137,7 @@ public:
     /// Conv Restore
     /// Add parse node
     ConvParams ConvparseAndFormat(const std::string& input);
-    std::vector<SVF::FilterSubNode> parse_filters(const std::string& s,
+    std::vector<FilterSubNode> parse_filters(const std::string& s,
                                                   unsigned num_filters,
                                                   unsigned kernel_height,
                                                   unsigned kernel_width,
@@ -145,6 +147,6 @@ public:
     /// ReLu's op has been moved into constructor
 };
 
-
+}
 
 #endif //SVF_ONNX_SVFONNX_H

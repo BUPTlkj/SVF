@@ -1,6 +1,8 @@
 #include "CheckModels.h"
 
-std::pair<SVF::LabelVector, SVF::MatrixVector_3c> SVF::LoadData::read_dataset(){
+using namespace SVF;
+
+std::pair<LabelVector, MatrixVector_3c> LoadData::read_dataset(){
 
     /// mnist 1*28*28
     /// cifar-10 1*3*32*32
@@ -100,11 +102,11 @@ std::pair<SVF::LabelVector, SVF::MatrixVector_3c> SVF::LoadData::read_dataset(){
     return std::make_pair(labels, matrixes_3c);
 }
 
-std::vector<SVF::LabelAndBounds> SVF::LoadData::perturbateImages(
-    const std::pair<SVF::LabelVector, SVF::MatrixVector_3c>& labelImagePairs,
+std::vector<LabelAndBounds> LoadData::perturbateImages(
+    const std::pair<LabelVector, MatrixVector_3c>& labelImagePairs,
     double eps) {
 
-    std::vector<SVF::LabelAndBounds> result;
+    std::vector<LabelAndBounds> result;
 
     for (size_t i = 0; i < labelImagePairs.first.size(); ++i) {
         signed label = labelImagePairs.first[i];

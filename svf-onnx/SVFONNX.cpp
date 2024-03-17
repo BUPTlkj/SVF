@@ -5,6 +5,7 @@
 /// Parse function to extract integers from a given string and return their
 /// vectors
 
+using namespace SVF;
 
 std::vector<int> SVFNN::parseDimensions(const std::string& input) {
     std::vector<int> dimensions;
@@ -454,7 +455,7 @@ ConvParams SVFNN::ConvparseAndFormat(const std::string& input) {
     return params;
 }
 
-std::vector<SVF::FilterSubNode> SVFNN::parse_filters(const std::string &s, unsigned int num_filters, unsigned int kernel_height,
+std::vector<FilterSubNode> SVFNN::parse_filters(const std::string &s, unsigned int num_filters, unsigned int kernel_height,
                                          unsigned int kernel_width, unsigned int kernel_depth)  {
     std::vector<std::vector<std::vector<std::vector<double>>>> data(num_filters, std::vector<std::vector<std::vector<double>>>(kernel_depth, std::vector<std::vector<double>>(kernel_height, std::vector<double>(kernel_width))));
 
@@ -482,7 +483,7 @@ std::vector<SVF::FilterSubNode> SVFNN::parse_filters(const std::string &s, unsig
             }
         }
     }
-    std::vector<SVF::FilterSubNode> filters;
+    std::vector<FilterSubNode> filters;
     for (unsigned n = 0; n < num_filters; ++n) {
         std::vector<Eigen::MatrixXd> matrices;
         for (unsigned d = 0; d < kernel_depth; ++d) {
@@ -538,19 +539,19 @@ std::vector<double> SVFNN::parse_Convbiasvector(std::string s) {
 class NNGraphBuilder {
 private:
     /// init nodes
-    std::unordered_map<std::string, SVF::ConstantNeuronNode*> ConstantNodeIns;
-    std::unordered_map<std::string, SVF::ConvNeuronNode*> ConvNodeIns;
-    std::unordered_map<std::string, SVF::ReLuNeuronNode*> ReLuNodeIns;
-    std::unordered_map<std::string, SVF::MaxPoolNeuronNode*> MaxPoolNodeIns;
-    std::unordered_map<std::string, SVF::FullyConNeuronNode*> FullyConNodeIns;
-    std::unordered_map<std::string, SVF::BasicOPNeuronNode*> BasicOPNodeIns;
+    std::unordered_map<std::string, ConstantNeuronNode*> ConstantNodeIns;
+    std::unordered_map<std::string, ConvNeuronNode*> ConvNodeIns;
+    std::unordered_map<std::string, ReLuNeuronNode*> ReLuNodeIns;
+    std::unordered_map<std::string, MaxPoolNeuronNode*> MaxPoolNodeIns;
+    std::unordered_map<std::string, FullyConNeuronNode*> FullyConNodeIns;
+    std::unordered_map<std::string, BasicOPNeuronNode*> BasicOPNodeIns;
     /// Node's class name for visitors
     std::vector<std::string> OrderedNodeName;
-    std::vector<std::unique_ptr<SVF::NeuronNode>> Nodeins;
+    std::vector<std::unique_ptr<NeuronNode>> Nodeins;
     /// init edges
-    std::vector<std::unique_ptr<SVF::Direct2NeuronEdge>> edges;
+    std::vector<std::unique_ptr<Direct2NeuronEdge>> edges;
     /// init Graph
-    SVF::NeuronNet *g = new SVF::NeuronNet();
+    NeuronNet *g = new NeuronNet();
 
 public:
     /// Allocate the NodeID
@@ -578,33 +579,33 @@ public:
     void operator()(const ConstantNodeInfo& node) {
         unsigned id = getNodeID(node.name);
         OrderedNodeName.push_back(node.name);
-        ConstantNodeIns[node.name] = new SVF::ConstantNeuronNode(id);
+        ConstantNodeIns[node.name] = new ConstantNeuronNode(id);
         g->addConstantNeuronNode(ConstantNodeIns[node.name]);
     }
 
     void operator()(const BasicNodeInfo& node)  {
         auto id = getNodeID(node.name);
         OrderedNodeName.push_back(node.name);
-        BasicOPNodeIns[node.name] = new SVF::BasicOPNeuronNode(id, node.typestr, node.values);
+        BasicOPNodeIns[node.name] = new BasicOPNeuronNode(id, node.typestr, node.values);
         g->addBasicOPNeuronNode(BasicOPNodeIns[node.name]);
     }
 
     void operator()(const ParsedGEMMParams& node)  {
         auto id = getNodeID(node.gemmName);
         OrderedNodeName.push_back(node.gemmName);
-        FullyConNodeIns[node.gemmName] = new SVF::FullyConNeuronNode(id, node.weight, node.bias);
+        FullyConNodeIns[node.gemmName] = new FullyConNeuronNode(id, node.weight, node.bias);
         g->addFullyConNeuronNode(FullyConNodeIns[node.gemmName]);
     }
 
     void operator()(const ConvNodeInfo& node) {
         auto id = getNodeID(node.name);
         OrderedNodeName.push_back(node.name);
-        ConvNodeIns[node.name] = new SVF::ConvNeuronNode(id, node.filter, node.conbias, node.pads.first, node.strides.first);
+        ConvNodeIns[node.name] = new ConvNeuronNode(id, node.filter, node.conbias, node.pads.first, node.strides.first);
         g->addConvNeuronNode(ConvNodeIns[node.name]);
 
         for(size_t ip = 0; ip < node.filter.size(); ++ip) {
             /// Using filter[i]
-            const SVF::FilterSubNode &subNode = node.filter[ip];
+            const FilterSubNode &subNode = node.filter[ip];
             for(size_t ipp = 0; ipp < subNode.value.size(); ipp++){
                 std::cout<<"Filter: "<<ip<<" - Matrix: "<<ipp<<std::endl;
                 std::cout<<subNode.value[ipp]<<std::endl;
@@ -615,18 +616,18 @@ public:
     void operator()(const ReluNodeInfo& node) {
         auto id = getNodeID(node.name);
         OrderedNodeName.push_back(node.name);
-        ReLuNodeIns[node.name] = new SVF::ReLuNeuronNode(id);
+        ReLuNodeIns[node.name] = new ReLuNeuronNode(id);
         g->addReLuNeuronNode(ReLuNodeIns[node.name]);
     }
 
     void operator()(const MaxPoolNodeInfo& node) {
         auto id = getNodeID(node.name);
         OrderedNodeName.push_back(node.name);
-        MaxPoolNodeIns[node.name] = new SVF::MaxPoolNeuronNode(id, node.windows.first, node.windows.second, node.strides.first, node.strides.second, node.pads.first, node.pads.second);
+        MaxPoolNodeIns[node.name] = new MaxPoolNeuronNode(id, node.windows.first, node.windows.second, node.strides.first, node.strides.second, node.pads.first, node.pads.second);
         g->addMaxPoolNeuronNode(MaxPoolNodeIns[node.name]);
     }
 
-    SVF::NeuronNodeVariant getNodeInstanceByName(const std::string& name) const {
+    NeuronNodeVariant getNodeInstanceByName(const std::string& name) const {
         if (auto it = ConstantNodeIns.find(name); it != ConstantNodeIns.end()) return it->second;
         if (auto it = ConvNodeIns.find(name); it != ConvNodeIns.end()) return it->second;
         if (auto it = ReLuNodeIns.find(name); it != ReLuNodeIns.end()) return it->second;
@@ -636,7 +637,7 @@ public:
         return std::monostate{};
     }
 
-    SVF::NeuronNode* getNodeInstanceByName1(const std::string& name) const {
+    NeuronNode* getNodeInstanceByName1(const std::string& name) const {
         if (auto it = ConstantNodeIns.find(name); it != ConstantNodeIns.end()) return it->second;
         if (auto it = ConvNodeIns.find(name); it != ConvNodeIns.end()) return it->second;
         if (auto it = ReLuNodeIns.find(name); it != ReLuNodeIns.end()) return it->second;
@@ -646,7 +647,7 @@ public:
         return nullptr;
     }
 
-    bool isValidNode(const SVF::NeuronNodeVariant& node) {
+    bool isValidNode(const NeuronNodeVariant& node) {
         return !std::holds_alternative<std::monostate>(node);
     }
 
@@ -656,12 +657,12 @@ public:
             const auto& currentName = OrderedNodeName[i];
             const auto& nextName = OrderedNodeName[i + 1];
 
-            SVF::NeuronNode* currentNode = getNodeInstanceByName1(currentName);
-            SVF::NeuronNode* nextNode = getNodeInstanceByName1(nextName);
+            NeuronNode* currentNode = getNodeInstanceByName1(currentName);
+            NeuronNode* nextNode = getNodeInstanceByName1(nextName);
 
             if (currentNode && nextNode) {
-                /// Ensure edge is created as a unique_ptr<SVF::Direct2NeuronEdge>
-                auto edge = std::make_unique<SVF::Direct2NeuronEdge>(currentNode, nextNode);
+                /// Ensure edge is created as a unique_ptr<Direct2NeuronEdge>
+                auto edge = std::make_unique<Direct2NeuronEdge>(currentNode, nextNode);
                 edges.push_back(std::move(edge)); // This should now work
             }
         }
@@ -680,21 +681,54 @@ public:
             std::cout<<in_x[j]<<std::endl;
         }
 
-        /// Note: Currently, visited and path store pointers to SVF:: NeuronNodeVariant
-        std::set<const SVF::NeuronNode *> visited;
-        std::vector<const SVF::NeuronNode *> path;
-        auto *dfs = new SVF::GraphTraversal();
+        /// Note: Currently, visited and path store pointers to  NeuronNodeVariant
+        std::set<const NeuronNode *> visited;
+        std::vector<const NeuronNode *> path;
+        auto *dfs = new GraphTraversal();
 
 
         const auto& LastName = OrderedNodeName[OrderedNodeName.size() - 1];
         const auto& FirstName = OrderedNodeName[0];
 
-        /// getNodeInstanceByName() return type: SVF::NeuronNodeVariant
-        auto FirstNode = getNodeInstanceByName(FirstName); /// Return SVF::NeuronNodeVariant
-        auto LastNode = getNodeInstanceByName(LastName); /// Return SVF::NeuronNodeVariant
+        /// getNodeInstanceByName() return type: NeuronNodeVariant
+        auto FirstNode = getNodeInstanceByName(FirstName); /// Return NeuronNodeVariant
+        auto LastNode = getNodeInstanceByName(LastName); /// Return NeuronNodeVariant
 
-        /// Due to DFS now accepting parameters: SVF:: NeuronNodeVariant type, directly passing the addresses of FirstNode and LastNode
+        /// Due to DFS now accepting parameters:  NeuronNodeVariant type, directly passing the addresses of FirstNode and LastNode
         dfs->DFS(visited, path, &FirstNode, &LastNode, in_x);
+        auto stringPath = dfs->getPaths();
+        std::cout<<"GET PATH"<<stringPath.size()<<std::endl;
+        int i = 0;
+        for (const std::string& paths : stringPath) {
+            std::cout << i <<"*****"<< paths << std::endl;
+            i++;
+        }
+
+        delete dfs; /// Delete allocated memory
+    }
+    void IntervalTraversal(std::vector<Eigen::MatrixXd>& in_x) {
+
+        /// Print the dataset matrix
+        for(int j=0; j<in_x.size();j++){
+            std::cout<<"Matrix: "<<j<<std::endl;
+            std::cout<<in_x[j]<<std::endl;
+        }
+
+        /// Note: Currently, visited and path store pointers to  NeuronNodeVariant
+        std::set<const NeuronNode *> visited;
+        std::vector<const NeuronNode *> path;
+        auto *dfs = new GraphTraversal();
+
+
+        const auto& LastName = OrderedNodeName[OrderedNodeName.size() - 1];
+        const auto& FirstName = OrderedNodeName[0];
+
+        /// getNodeInstanceByName() return type: NeuronNodeVariant
+        auto FirstNode = getNodeInstanceByName(FirstName); /// Return NeuronNodeVariant
+        auto LastNode = getNodeInstanceByName(LastName); /// Return NeuronNodeVariant
+
+        /// Due to DFS now accepting parameters:  NeuronNodeVariant type, directly passing the addresses of FirstNode and LastNode
+        dfs->IntervalDFS(visited, path, &FirstNode, &LastNode, in_x);
         auto stringPath = dfs->getPaths();
         std::cout<<"GET PATH"<<stringPath.size()<<std::endl;
         int i = 0;
@@ -714,37 +748,42 @@ int main(){
 
 ////    std::string address = "/Users/liukaijie/Desktop/operation-py/convSmallRELU__Point.onnx";
 //////    std::string address = "/Users/liukaijie/Desktop/operation-py/mnist_conv_maxpool.onnx";
-//    std::string address = "/Users/liukaijie/Desktop/operation-py/ffnnRELU__Point_6_500.onnx";
+    std::string address = "/Users/liukaijie/Desktop/operation-py/ffnnRELU__Point_6_500.onnx";
 //
-//    /// parse onnx into svf-onnx
-//    SVFNN svfnn(address);
-//    auto nodes = svfnn.get_nodes();
-//
-//    /// Init nn-graph builder
-//    NNGraphBuilder nngraph;
-//
-//    /// Init & Add node
-//    for (const auto& node : nodes) {
-//        std::visit(nngraph, node);
-//    }
-//
-//    /// Init & Add Edge
-//    nngraph.AddEdges();
+    /// parse onnx into svf-onnx
+    SVFNN svfnn(address);
+    auto nodes = svfnn.get_nodes();
+
+    /// Init nn-graph builder
+    NNGraphBuilder nngraph;
+
+    /// Init & Add node
+    for (const auto& node : nodes) {
+        std::visit(nngraph, node);
+    }
+
+    /// Init & Add Edge
+    nngraph.AddEdges();
 
     /// Load dataset: mnist or cifa-10
-//    SVF::LoadData dataset("cifar");
-    SVF::LoadData dataset("mnist");
+//    LoadData dataset("cifar");
+    LoadData dataset("mnist");
     auto x = dataset.read_dataset();
-//    std::cout<<"Label: "<<x.first.front()<<std::endl;
+    std::cout<<"Label: "<<x.first.front()<<std::endl;
 //
 //    double perti = 0.001;
 //    auto per_x = dataset.perturbateImages(x, perti);
 //
     /// Run abstract interpretation on NNgraph
 //    nngraph.Traversal(x.second.front());
+
+    /// Run abstract interpretation on NNgraph Interval
+    nngraph.IntervalTraversal(x.second.front());
+
 //
-    SVF::IntervalSolver aab(x.second.front());
-    aab.initializeMatrix();
+//    IntervalSolver aab(x.second.front());
+//    IntervalSolver aab;
+//    aab.initializeMatrix();
 //
 //    std::vector<Eigen::MatrixXd> a;
 //    Eigen::MatrixXd mat(2, 2);

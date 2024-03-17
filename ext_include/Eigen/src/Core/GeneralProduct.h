@@ -216,7 +216,7 @@ template<> struct gemv_dense_selector<OnTheRight,ColMajor,true>
     typedef typename Lhs::Scalar   LhsScalar;
     typedef typename Rhs::Scalar   RhsScalar;
     typedef typename Dest::Scalar  ResScalar;
-    typedef typename Dest::RealScalar  RealScalar;
+//    typedef typename Dest::RealScalar  RealScalar;
     
     typedef internal::blas_traits<Lhs> LhsBlasTraits;
     typedef typename LhsBlasTraits::DirectLinearAccessType ActualLhsType;
@@ -261,7 +261,8 @@ template<> struct gemv_dense_selector<OnTheRight,ColMajor,true>
     {
       gemv_static_vector_if<ResScalar,ActualDest::SizeAtCompileTime,ActualDest::MaxSizeAtCompileTime,MightCannotUseDest> static_dest;
 
-      const bool alphaIsCompatible = (!ComplexByReal) || (numext::imag(actualAlpha)==RealScalar(0));
+//      const bool alphaIsCompatible = (!ComplexByReal) || (numext::imag(actualAlpha)==RealScalar(0));
+      const bool alphaIsCompatible = (!ComplexByReal);
       const bool evalToDest = EvalToDestAtCompileTime && alphaIsCompatible;
 
       ei_declare_aligned_stack_constructed_variable(ResScalar,actualDestPtr,dest.size(),

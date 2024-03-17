@@ -5,8 +5,14 @@
 #include "GenericGraph.h"
 #include "NNEdge.h"
 #include <Eigen/Dense>
+#include "AE/Core/IntervalValue.h"
 
 namespace SVF{
+
+typedef Eigen::Matrix<IntervalValue, Eigen::Dynamic, Eigen::Dynamic> IntervalMat;
+typedef std::vector<IntervalMat> IntervalMatrices;
+typedef Eigen::Matrix<IntervalValue, Eigen::Dynamic, 1> IntervalVector; // Eigen::VectorXd
+
 
 class NeuronNode;
 class ReLuNeuronNode;
@@ -17,10 +23,10 @@ class ConvNeuronNode;
 class ConstantNeuronNode;
 
 using NeuronNodeVariant =
-    std::variant<std::monostate, SVF::ConstantNeuronNode*,
-                 SVF::BasicOPNeuronNode*, SVF::FullyConNeuronNode*,
-                 SVF::ConvNeuronNode*, SVF::ReLuNeuronNode*,
-                 SVF::MaxPoolNeuronNode*>;
+    std::variant<std::monostate, ConstantNeuronNode*,
+                 BasicOPNeuronNode*, FullyConNeuronNode*,
+                 ConvNeuronNode*, ReLuNeuronNode*,
+                 MaxPoolNeuronNode*>;
 
 typedef GenericNode<NeuronNode, NeuronEdge> GenericNeuronNodeTy;
 class NeuronNode: public GenericNeuronNodeTy{
@@ -151,6 +157,7 @@ public:
 class BasicOPNeuronNode:public NeuronNode{
 public:
     std::vector<Eigen::MatrixXd> constant;
+//    IntervalMat Intervalconstant;
     std::string oper;
 
     /// Build Add/Sub/Mul/Div node

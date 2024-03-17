@@ -138,12 +138,12 @@ public:
 
 
     /// By Node
-    bool checkNodeInVariant(const SVF::NeuronNode* current, const NeuronNodeVariant& dst);
-    void printPath(std::vector<const SVF::NeuronNode *> &path);
-    SVF::NeuronNode* getNeuronNodePtrFromVariant(const NeuronNodeVariant& variant);
-    SVF::NeuronNodeVariant convertToVariant(SVF::NeuronNode* node);
-    void DFS(std::set<const SVF::NeuronNode *> &visited, std::vector<const SVF::NeuronNode *> &path, const SVF::NeuronNodeVariant *src, const SVF::NeuronNodeVariant *dst, std::vector<Eigen::MatrixXd> in_x);
-    void IntervalDFS(std::set<const SVF::NeuronNode *> &visited, std::vector<const SVF::NeuronNode *> &path, const SVF::NeuronNodeVariant *src, const SVF::NeuronNodeVariant *dst, std::vector<Eigen::MatrixXd> in_x);
+    bool checkNodeInVariant(const NeuronNode* current, const NeuronNodeVariant& dst);
+    void printPath(std::vector<const NeuronNode *> &path);
+    NeuronNode* getNeuronNodePtrFromVariant(const NeuronNodeVariant& variant);
+    NeuronNodeVariant convertToVariant(NeuronNode* node);
+    void DFS(std::set<const NeuronNode *> &visited, std::vector<const NeuronNode *> &path, const NeuronNodeVariant *src, const NeuronNodeVariant *dst, std::vector<Eigen::MatrixXd> in_x);
+    void IntervalDFS(std::set<const NeuronNode *> &visited, std::vector<const NeuronNode *> &path, const NeuronNodeVariant *src, const NeuronNodeVariant *dst, std::vector<Eigen::MatrixXd> in_x);
     /// Retrieve all paths (a set of strings) during graph traversal
     std::set<std::string>& getPaths(){
         return paths;
@@ -164,19 +164,19 @@ namespace SVF{
  * GenericGraphTraits specializations for generic graph algorithms.
  * Provide graph traits for traversing from a constraint node using standard graph traversals.
  */
-template<> struct GenericGraphTraits<SVF::NeuronNode*> : public GenericGraphTraits<SVF::GenericNode<SVF::NeuronNode,SVF::NeuronEdge>*  >
+template<> struct GenericGraphTraits<NeuronNode*> : public GenericGraphTraits<GenericNode<NeuronNode,NeuronEdge>*  >
 {
 };
 
 /// Inverse GenericGraphTraits specializations for call graph node, it is used for inverse traversal.
 //template<>
-//struct GenericGraphTraits<Inverse<SVF::NeuronNode *> > : public GenericGraphTraits<Inverse<SVF::GenericNode<SVF::NeuronNode,SVF::NeuronEdge>* > >
+//struct GenericGraphTraits<Inverse<NeuronNode *> > : public GenericGraphTraits<Inverse<GenericNode<NeuronNode,NeuronEdge>* > >
 //{
 //};
 
-template<> struct GenericGraphTraits<SVF::NeuronNet*> : public GenericGraphTraits<SVF::GenericGraph<SVF::NeuronNode,SVF::NeuronEdge>* >
+template<> struct GenericGraphTraits<NeuronNet*> : public GenericGraphTraits<GenericGraph<NeuronNode, NeuronEdge>* >
 {
-    typedef SVF::NeuronNode *NodeRef;
+    typedef NeuronNode *NodeRef;
 };
 
 } // End namespace SVF

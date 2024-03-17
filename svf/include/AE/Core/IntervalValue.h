@@ -533,16 +533,6 @@ inline IntervalValue operator+(const IntervalValue &lhs,
 ////    return *this;
 //}
 
-inline IntervalValue& operator+=(const IntervalValue& rhs) {
-    if (this->isBottom() || rhs.isBottom()) {
-        *this = bottom();
-    } else if (this->isTop() || rhs.isTop()) {
-        *this = top();
-    } else {
-        *this = IntervalValue(this->lb() + rhs.lb(), this->ub() + rhs.ub());
-    }
-    return *this;
-}
 
 /// Subtract IntervalValues
 inline IntervalValue operator-(const IntervalValue &lhs,
@@ -993,6 +983,27 @@ inline IntervalValue operator^(const IntervalValue &lhs, const IntervalValue &rh
     }
 }
 
+
+inline IntervalValue operator+=(IntervalValue& lhs, const IntervalValue& rhs) {
+    lhs = lhs + rhs;
+    return lhs + rhs;
+}
+
+inline IntervalValue operator*=(IntervalValue& lhs, const IntervalValue& rhs) {
+    lhs = lhs * rhs;
+    return lhs;
+}
+
+inline IntervalValue operator-=(IntervalValue& lhs, const IntervalValue& rhs) {
+    lhs = lhs - rhs;
+    return lhs;
+}
+
+inline IntervalValue operator/=(IntervalValue& lhs, const IntervalValue& rhs) {
+    lhs = lhs / rhs;
+    return lhs;
+}
+
 /// Write an IntervalValue on a stream
 inline std::ostream &operator<<(std::ostream &o,
                                 const IntervalValue &IntervalValue)
@@ -1000,6 +1011,8 @@ inline std::ostream &operator<<(std::ostream &o,
     IntervalValue.dump(o);
     return o;
 }
+
+
 
 } // end namespace SVF
 #endif //Z3_EXAMPLE_IntervalValue_H
