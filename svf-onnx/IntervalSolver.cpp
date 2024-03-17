@@ -62,7 +62,7 @@ void IntervalSolver::initializeMatrix() {
 
 
 
-    /// 需要定义ab
+    /// Define ab
     Eigen::Matrix<IntervalValue, Eigen::Dynamic, Eigen::Dynamic> matrixq(2, 2);
     matrixq(0,0) = IntervalValue(2.1, 2.1);
     matrixq(0,1) = IntervalValue(0,0);
@@ -115,10 +115,8 @@ IntervalMatrices IntervalSolver::convertMatricesToIntervalMatrices(const std::ve
         Eigen::Matrix<IntervalValue, Eigen::Dynamic, Eigen::Dynamic> intervalMatrix(mat.rows(), mat.cols());
         for (int i = 0; i < mat.rows(); ++i) {
             for (int j = 0; j < mat.cols(); ++j) {
-                // 对于每个元素x，创建一个区间[x, x]
-//                std::cout<<"Matrix: ("<<i<<", "<<j<<") :  "<<mat(i,j)<<" Is double? "<<isDouble(mat(i,j))<<std::endl;
+                /// [x, x]
                 intervalMatrix(i, j) = IntervalValue(mat(i, j), mat(i, j));
-//                intervalMatrix(i, j) = IntervalValue(static_cast<double>(mat(i, j)), static_cast<double>(mat(i, j)));
             }
         }
         intervalMatrices.push_back(intervalMatrix);
@@ -131,8 +129,7 @@ IntervalMat IntervalSolver::convertMatToIntervalMat(const Eigen::MatrixXd& matri
     Eigen::Matrix<IntervalValue, Eigen::Dynamic, Eigen::Dynamic> intervalMatrix(matrix.rows(), matrix.cols());
     for (int i = 0; i < matrix.rows(); ++i) {
         for (int j = 0; j < matrix.cols(); ++j) {
-            // 对于每个元素x，创建一个区间[x, x]
-//            std::cout<<"Matrix: ("<<i<<", "<<j<<") :  "<<matrix(i,j)<<" Is double? "<<isDouble(matrix(i,j))<<std::endl;
+            /// [x, x]
             intervalMatrix(i, j) = IntervalValue(matrix(i, j), matrix(i, j));
         }
     }
@@ -140,18 +137,16 @@ IntervalMat IntervalSolver::convertMatToIntervalMat(const Eigen::MatrixXd& matri
 }
 
 IntervalMat IntervalSolver::convertVectorXdToIntervalVector(const Eigen::VectorXd& vec) {
-    // 创建一个具有相同行数的IntervalEigen，列数为1
+    ///cols = 1
     IntervalMat intervalMat(vec.size(), 1);
 
-    // 遍历VectorXd中的每个元素
     for (int i = 0; i < vec.size(); ++i) {
-        // 将每个double值转换为一个具有相同上下界的IntervalValue
+        /// IntervalValue(double, double)
         intervalMat(i, 0) = IntervalValue(vec(i), vec(i)); // 需要IntervalValue有一个接受两个double的构造函数
     }
 
     return intervalMat;
 }
-
 
 std::pair<std::vector<Eigen::MatrixXd>, std::vector<Eigen::MatrixXd>> IntervalSolver::splitIntervalMatrices(const std::vector<Eigen::Matrix<IntervalValue, Eigen::Dynamic, Eigen::Dynamic>>& intervalMatrices) {
     std::vector<Eigen::MatrixXd> lowerBounds, upperBounds;
@@ -179,19 +174,18 @@ std::pair<std::vector<Eigen::MatrixXd>, std::vector<Eigen::MatrixXd>> IntervalSo
 IntervalMatrices IntervalSolver::ReLuNeuronNodeevaluate() const {
     std::cout << "Reluing....." << std::endl;
     IntervalMatrices x_out;
-    for (const auto& mat : in_x) { // 直接使用auto&避免拷贝
+    for (const auto& mat : in_x) { // using auto& avoid copy
         Eigen::Matrix<IntervalValue, Eigen::Dynamic, Eigen::Dynamic> o(mat.rows(), mat.cols());
         for (u32_t i = 0; i < mat.rows(); i++) {
             for (u32_t j = 0; j < mat.cols(); j++) {
-                const auto& iv = mat(i, j); // 获取当前区间
-                double lb = iv.lb().getNumeral(); // 获取区间下界
-                double ub = iv.ub().getNumeral(); // 获取区间上界
+                const auto& iv = mat(i, j); /// Current interval
+                double lb = iv.lb().getNumeral(); /// lower bound
+                double ub = iv.ub().getNumeral(); /// upper bound
 
-                // 应用ReLU函数逻辑
+                /// Relu
                 double newLb = std::max(0.0, lb);
                 double newUb = std::max(0.0, ub);
 
-                // 创建新的IntervalValue，这里假设有一个接受两个double参数的构造函数
                 o(i, j) = IntervalValue(newLb, newUb);
             }
         }
@@ -204,9 +198,7 @@ IntervalMatrices IntervalSolver::ReLuNeuronNodeevaluate() const {
 IntervalMatrices IntervalSolver::BasicOPNeuronNodeevaluate( const BasicOPNeuronNode *basic){
     std::cout<<"BasicNoding...... The input size: "<<in_x.size()<<std::endl;
 
-
     IntervalMatrices result;
-//    std::vector<Eigen::MatrixXd> result;
 
     /// ensure A and B the number of depth equal
     auto constant = basic->constant;
@@ -230,7 +222,6 @@ IntervalMatrices IntervalSolver::BasicOPNeuronNodeevaluate( const BasicOPNeuronN
         /// where all elements are the corresponding channel values of B
         Eigen::MatrixXd temp = Eigen::MatrixXd::Constant(in_x[i].rows(), in_x[i].cols(), constant[i](0,0));
 
-
         auto Intervaltemp = convertMatToIntervalMat(temp);
 
         /// Subtract the channel of A from the above matrix
@@ -253,7 +244,6 @@ IntervalMatrices IntervalSolver::BasicOPNeuronNodeevaluate( const BasicOPNeuronN
     std::cout<<"The result matrix: ("<<result.size()<<", "<<result[0].rows()<<", "<<result[0].cols()<<") "<<std::endl;
     return result;
 }
-
 
 IntervalMatrices IntervalSolver::MaxPoolNeuronNodeevaluate( const MaxPoolNeuronNode *maxpool){
     std::cout<<"Maxpooling....."<<std::endl;
@@ -311,17 +301,14 @@ IntervalMatrices IntervalSolver::MaxPoolNeuronNodeevaluate( const MaxPoolNeuronN
                 outMatrixL(i, j) = maxValL;
             }
         }
-        // 初始化IntervalEigen对象，大小与outMatrixU和outMatrixL相同
+        /// IntervalMat，(outMatrixU, outMatrixL)
         IntervalMat intervalMatrix(outHeight, outWidth);
 
-        // 遍历矩阵元素，为每个元素创建IntervalValue
         for (int i = 0; i < outHeight; ++i) {
             for (int j = 0; j < outWidth; ++j) {
                 double lower = outMatrixL(i, j); // 下界值
                 double upper = outMatrixU(i, j); // 上界值
 
-                // 创建IntervalValue对象并赋值给intervalMatrix的相应位置
-                // 假设SVF::IntervalValue有一个接受两个double参数的构造函数，分别代表下界和上界
                 intervalMatrix(i, j) = IntervalValue(lower, upper);
             }
         }
@@ -398,7 +385,6 @@ IntervalMatrices IntervalSolver::ConvNeuronNodeevaluate( const ConvNeuronNode *c
     u32_t out_width = ((in_x[0].cols() - filter[0].get_width() + 2*padding) / stride) + 1;
 
     /// Padding
-//    std::vector<Eigen::MatrixXd> padded_x(in_x.size());
     IntervalMatrices padded_x(in_x.size());
     for (u32_t i = 0; i < in_x.size(); ++i) {
         padded_x[i] = convertMatToIntervalMat(Eigen::MatrixXd::Zero(in_x[i].rows() + 2*padding, in_x[i].cols() + 2*padding));
@@ -418,7 +404,6 @@ IntervalMatrices IntervalSolver::ConvNeuronNodeevaluate( const ConvNeuronNode *c
                             /// Strides
                             u32_t row = k * stride + j_;
                             int col = j * stride + k_;
-//                            std::vector<Eigen::MatrixXd> filtervalue;
                             if (row < padded_x[i_].rows() && col < padded_x[i_].cols()) {
                                 sum += convertMatricesToIntervalMatrices(filter[i].value)[i_](j_, k_) * padded_x[i_](row, col);
                             }

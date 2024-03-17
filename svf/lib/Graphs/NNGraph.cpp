@@ -512,7 +512,6 @@ void GraphTraversal::IntervalDFS(std::set<const NeuronNode *> &visited, std::vec
 
         const NeuronNode* current = currentPair.first;
 
-        /// 需要重载=运算符？
         IRRes = *currentPair.second;
         std::cout<<"*******IRRes:"<<IRRes.size()<<", "<<IRRes[0].rows()<<", "<<IRRes[0].cols()<<std::endl;
 
