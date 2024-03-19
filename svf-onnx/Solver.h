@@ -11,32 +11,32 @@ namespace  SVF
 class SolverEvaluate
 {
 public:
-    std::vector<Eigen::MatrixXd> data_matrix;
+    Matrices data_matrix;
 
-    std::vector<Eigen::MatrixXd> in_x;
+    Matrices in_x;
 
-    SolverEvaluate(const std::vector<Eigen::MatrixXd>& in) : data_matrix(in) {}
+    SolverEvaluate(const Matrices& in) : data_matrix(in) {}
 
-    inline void setIRMatrix(std::vector<Eigen::MatrixXd> x)
+    inline void setIRMatrix(Matrices x)
     {
         in_x = x;
     }
 
-    std::vector<Eigen::MatrixXd> ReLuNeuronNodeevaluate() const;
+    Matrices ReLuNeuronNodeevaluate() const;
 
-    std::vector<Eigen::MatrixXd> BasicOPNeuronNodeevaluate(
+    Matrices BasicOPNeuronNodeevaluate(
         const BasicOPNeuronNode* basic) const;
 
-    std::vector<Eigen::MatrixXd> MaxPoolNeuronNodeevaluate(
+    Matrices MaxPoolNeuronNodeevaluate(
         const MaxPoolNeuronNode* maxpool) const;
 
-    std::vector<Eigen::MatrixXd> FullyConNeuronNodeevaluate(
+    Matrices FullyConNeuronNodeevaluate(
         const FullyConNeuronNode* fully) const;
 
-    std::vector<Eigen::MatrixXd> ConvNeuronNodeevaluate(
+    Matrices ConvNeuronNodeevaluate(
         const ConvNeuronNode* conv) const;
 
-    std::vector<Eigen::MatrixXd> ConstantNeuronNodeevaluate() const;
+    Matrices ConstantNeuronNodeevaluate() const;
 };
 }
 

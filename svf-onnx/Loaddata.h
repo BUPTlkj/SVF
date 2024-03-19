@@ -1,13 +1,13 @@
 
 
-#ifndef SVF_CHECKMODELS_H
-#define SVF_CHECKMODELS_H
+#ifndef SVF_LOADDATA_H
+#define SVF_LOADDATA_H
 
-#include "iostream"
 #include "Eigen/Dense"
+#include "Graphs/NNNode.h"
+#include "iostream"
 #include <fstream>
 #include <sstream>
-
 
 namespace SVF
 {
@@ -16,14 +16,14 @@ namespace SVF
 typedef std::vector<signed> LabelVector;
 
 /// Image pixel matrix
-typedef std::vector<std::vector<Eigen::MatrixXd>> MatrixVector_3c;
+typedef std::vector<Matrices> MatrixVector_3c;
 
 /// Upper & lower Bound
 struct LabelAndBounds
 {
     signed label;
-    std::vector<Eigen::MatrixXd> matrix_lb;
-    std::vector<Eigen::MatrixXd> matrix_ub;
+    Matrices matrix_lb;
+    Matrices matrix_ub;
 };
 
 class LoadData
@@ -34,12 +34,9 @@ public:
 public:
     LoadData(std::string name) : dataset{name}
     {
-        if (dataset == "mnist" or dataset == "cifar")
-        {
+        if (dataset == "mnist" or dataset == "cifar"){
             std::cout << "Loading " << dataset << " ......" << std::endl;
-        }
-        else
-        {
+        }else{
             throw std::runtime_error(
                 "UNSUPPORT DATASET, ONLY SUPPORT MNIST AND CIFAR 10");
         }
@@ -55,4 +52,4 @@ public:
 
 
 
-#endif // SVF_CHECKMODELS_H
+#endif // SVF_LOADDATA_H

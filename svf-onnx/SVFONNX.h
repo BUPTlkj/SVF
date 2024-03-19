@@ -36,12 +36,14 @@ struct BasicNodeInfo
 {
     std::string name;    /// Which Nametype
     std::string typestr; ///  Just type
-    std::tuple<int, int, int, int> dimensions;
-    std::vector<Eigen::MatrixXd> values;
+    std::tuple<u32_t, u32_t, u32_t, u32_t> dimensions;
+    Matrices values;
+    IntervalMatrices Intervalvalues;
 };
 
 /// GEMM
-struct ParsedGEMMParams
+//struct ParsedGEMMParams
+struct FullyconnectedInfo
 {
     std::string gemmName;
     std::string weightName;
@@ -50,8 +52,10 @@ struct ParsedGEMMParams
     std::string biasName;
     std::string biasDimensions;
     std::string biasValues;
-    Eigen::MatrixXd weight;
-    Eigen::VectorXd bias;
+    Mat weight;
+    Vector bias;
+    IntervalMat Intervalweight;
+    IntervalMat Intervalbias;
 };
 
 /// Conv
@@ -60,8 +64,9 @@ struct ConvNodeInfo
     std::string name;
     std::vector<FilterSubNode> filter;
     std::vector<double> conbias;
-    std::pair<unsigned, unsigned> strides;
-    std::pair<unsigned, unsigned> pads;
+    std::vector<IntervalValue> Intervalbias;
+    std::pair<u32_t, u32_t> strides;
+    std::pair<u32_t, u32_t> pads;
 };
 
 /// ReLu
@@ -74,15 +79,14 @@ struct ReluNodeInfo
 struct MaxPoolNodeInfo
 {
     std::string name;
-    std::pair<int, int> windows;
-    std::pair<int, int> strides;
-    std::pair<int, int> pads;
+    std::pair<u32_t, u32_t> windows;
+    std::pair<u32_t, u32_t> strides;
+    std::pair<u32_t, u32_t> pads;
 };
 
 /// Neural Net struct
 using SVFNeuralNet =
-    std::variant<ConstantNodeInfo, BasicNodeInfo, ParsedGEMMParams,
-                 ConvNodeInfo, ReluNodeInfo, MaxPoolNodeInfo>;
+    std::variant<ConstantNodeInfo, BasicNodeInfo, FullyconnectedInfo, ConvNodeInfo, ReluNodeInfo, MaxPoolNodeInfo>;
 
 class SVFNN
 {
@@ -105,43 +109,41 @@ public:
         const std::string& address, const std::string& functionName);
 
     /// 2. Parse function, return a string vector containing four parts of information
-    std::vector<int> parseDimensions(const std::string& input);
+    std::vector<u32_t> parseDimensions(const std::string& input);
     std::vector<std::string> parseNodeData(const std::string& dataStr);
 
-    std::vector<std::string> splitString(const std::string& str,
-                                         const std::string& delimiter);
+    std::vector<std::string> splitString(const std::string& str, const std::string& delimiter);
     std::pair<std::string, std::string> parseItem(const std::string& item);
-    std::map<std::string, std::pair<std::pair<int, int>, std::pair<int, int>>>
+    std::map<std::string, std::pair<std::pair<u32_t, u32_t>, std::pair<u32_t, u32_t>>>
     parseConvItems(const std::vector<std::string>& items);
-    std::map<std::string,
-             std::pair<std::pair<int, int>,
-                       std::pair<std::pair<int, int>, std::pair<int, int>>>>
+    std::map<std::string, std::pair<std::pair<u32_t, u32_t>, std::pair<std::pair<u32_t, u32_t>, std::pair<u32_t, u32_t>>>>
     parseMaxPoolItems(const std::vector<std::string>& items);
     /// Parse maxpool & conv special info
 
-    /// 3. Restoration of each part
+    /// 3. IntervalValue Process
+    /// Matrices -> IntervalMatrix
+    IntervalMatrices convertMatricesToIntervalMatrices(const Matrices& matrices);
+    IntervalMat convertMatToIntervalMat(const Mat& matrix);
+    IntervalMat convertVectorXdToIntervalVector(const Vector& vec);
+
+    std::pair<Matrices, Matrices> splitIntervalMatrices(const IntervalMatrices & intervalMatrices);
+
+    /// 4. Restoration of each part
     /// constant node op has been moved into constructor
 
     /// Basic OP Restore
     BasicNodeInfo parseBasicNodeString(const std::string& nodeString);
 
     /// GEMM (Fullycon) Restore
-    std::string trim(const std::string& str,
-                     const std::string& chars = "\t\n\v\f\r ");
-    ParsedGEMMParams GEMMparseAndFormat(const std::string& input);
-    Eigen::MatrixXd restoreGEMMWeightToMatrix(const std::string& dimensions,
-                                              const std::string& values);
-    Eigen::VectorXd restoreGEMMBiasMatrixFromStrings(
-        const std::string& dimensionStr, const std::string& valuesStr);
+    std::string trim(const std::string& str, const std::string& chars = "\t\n\v\f\r ");
+    FullyconnectedInfo GEMMparseAndFormat(const std::string& input);
+    Mat restoreGEMMWeightToMatrix(const std::string& dimensions, const std::string& values);
+    Vector restoreGEMMBiasMatrixFromStrings(const std::string& dimensionStr, const std::string& valuesStr);
 
     /// Conv Restore
     /// Add parse node
     ConvParams ConvparseAndFormat(const std::string& input);
-    std::vector<FilterSubNode> parse_filters(const std::string& s,
-                                                  unsigned num_filters,
-                                                  unsigned kernel_height,
-                                                  unsigned kernel_width,
-                                                  unsigned kernel_depth);
+    std::vector<FilterSubNode> parse_filters(const std::string& s, u32_t num_filters, u32_t kernel_height, u32_t kernel_width, u32_t kernel_depth);
     std::vector<double> parse_Convbiasvector(std::string s);
 
     /// ReLu's op has been moved into constructor

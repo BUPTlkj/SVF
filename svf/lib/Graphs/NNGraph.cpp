@@ -1,6 +1,6 @@
-#include "../svf-onnx/CheckModels.h"
-#include "../svf-onnx/Solver.h"
 #include "Graphs/NNGraph.h"
+#include "../svf-onnx/Loaddata.h"
+#include "../svf-onnx/Solver.h"
 #include "SVFIR/SVFIR.h"
 #include "Util/SVFUtil.h"
 #include "iomanip"
@@ -13,13 +13,12 @@ NeuronNode::NodeK ReLuNeuronNode::get_type() const{
     return ReLuNode;
 }
 
-
 /// filter
-unsigned int FilterSubNode::get_depth() const{
+u32_t FilterSubNode::get_depth() const{
     return value.size();
 }
 
-unsigned int FilterSubNode::get_height() const{
+u32_t FilterSubNode::get_height() const{
     if (value.size() > 0) {
         /// The first channel
         return value[0].rows();
@@ -29,7 +28,7 @@ unsigned int FilterSubNode::get_height() const{
     }
 }
 
-unsigned int FilterSubNode::get_width() const{
+u32_t FilterSubNode::get_width() const{
     if (value.size() > 0) {
         return value[0].cols();
     }
@@ -52,9 +51,9 @@ double FilterSubNode::dot_product(const FilterSubNode& val_f) const{
     }
 
     /// dot
-    for (unsigned i = 0; i < get_depth(); i++) {
-        for (unsigned j = 0; j < get_height(); j++) {
-            for (unsigned k = 0; k < get_width(); k++) {
+    for (u32_t i = 0; i < get_depth(); i++) {
+        for (u32_t j = 0; j < get_height(); j++) {
+            for (u32_t k = 0; k < get_width(); k++) {
                 sum += val_f.value[i](j, k) * value[i](j, k);
             }
         }
@@ -84,27 +83,27 @@ NeuronNode::NodeK MaxPoolNeuronNode::get_type() const{
     return MaxPoolNode;
 }
 
-unsigned int MaxPoolNeuronNode::get_window_width() const{
+u32_t MaxPoolNeuronNode::get_window_width() const{
     return window_height;
 }
 
-unsigned int MaxPoolNeuronNode::get_window_height() const{
+u32_t MaxPoolNeuronNode::get_window_height() const{
     return window_width;
 }
 
-unsigned int MaxPoolNeuronNode::get_stride_width() const{
+u32_t MaxPoolNeuronNode::get_stride_width() const{
     return stride_width;
 }
 
-unsigned int MaxPoolNeuronNode::get_stride_height() const{
+u32_t MaxPoolNeuronNode::get_stride_height() const{
     return stride_height;
 }
 
-unsigned int MaxPoolNeuronNode::get_pad_width() const{
+u32_t MaxPoolNeuronNode::get_pad_width() const{
     return pad_width;
 }
 
-unsigned int MaxPoolNeuronNode::get_pad_height() const{
+u32_t MaxPoolNeuronNode::get_pad_height() const{
     return pad_height;
 }
 
@@ -115,11 +114,11 @@ NeuronNode::NodeK FullyConNeuronNode::get_type() const{
     return FullyConNode;
 }
 
-Eigen::MatrixXd FullyConNeuronNode::get_weight() const{
+Mat FullyConNeuronNode::get_weight() const{
     return weight;
 }
 
-Eigen::VectorXd FullyConNeuronNode::get_bias() const{
+Vector FullyConNeuronNode::get_bias() const{
     return bias;
 }
 
@@ -392,18 +391,17 @@ NeuronNode* GraphTraversal::getNeuronNodePtrFromVariant(const NeuronNodeVariant&
     }, variant);
 }
 
-
 ///  3.13
 /// matrix into interval
-void GraphTraversal::DFS(std::set<const NeuronNode *> &visited, std::vector<const NeuronNode *> &path, const NeuronNodeVariant *src, const NeuronNodeVariant *dst, std::vector<Eigen::MatrixXd> in_x) {
-    std::stack<std::pair<NeuronNode*, std::vector<Eigen::MatrixXd>>> stack;
+void GraphTraversal::DFS(std::set<const NeuronNode *> &visited, std::vector<const NeuronNode *> &path, const NeuronNodeVariant *src, const NeuronNodeVariant *dst, Matrices in_x) {
+    std::stack<std::pair<NeuronNode*, std::vector<Mat>>> stack;
 
     /// Ensure that src is obtained by dereferencing NeuronNode
     stack.emplace(getNeuronNodePtrFromVariant(*src), in_x);
 
     SolverEvaluate solver(in_x);
     int i = 0;
-    std::vector<Eigen::MatrixXd> IRRes;
+    Matrices IRRes;
 
     while (!stack.empty()) {
         std::cout<<" Node: "<<i<<std::endl;
@@ -439,7 +437,7 @@ void GraphTraversal::DFS(std::set<const NeuronNode *> &visited, std::vector<cons
 
             if (visited.count(neighbor) == 0) {
                 /// Process IRRes based on the type of neighbor
-                std::vector<Eigen::MatrixXd> newIRRes; /// Copy the current IRRes to avoid modifying the original data
+                Matrices newIRRes; /// Copy the current IRRes to avoid modifying the original data
                 if (neighbor->get_type() == 0) {
                     solver.setIRMatrix(IRRes);
                     newIRRes = solver.ReLuNeuronNodeevaluate();
@@ -493,7 +491,7 @@ void GraphTraversal::DFS(std::set<const NeuronNode *> &visited, std::vector<cons
 
 ///  3.13
 /// matrix into interval
-void GraphTraversal::IntervalDFS(std::set<const NeuronNode *> &visited, std::vector<const NeuronNode *> &path, const NeuronNodeVariant *src, const NeuronNodeVariant *dst, std::vector<Eigen::MatrixXd> in_x) {
+void GraphTraversal::IntervalDFS(std::set<const NeuronNode *> &visited, std::vector<const NeuronNode *> &path, const NeuronNodeVariant *src, const NeuronNodeVariant *dst, IntervalMatrices in_x) {
     std::stack<std::pair<NeuronNode*, IntervalMatrices *>> stack;
     IntervalSolver solver(in_x);
 
@@ -581,12 +579,11 @@ void GraphTraversal::IntervalDFS(std::set<const NeuronNode *> &visited, std::vec
         std::cout << "IRRes content after the loop iteration:" << i << ",    Number of Intervalmatrix: " << IRRes.size() <<std::endl;
         std::cout.precision(20);
         std::cout << std::fixed;
-//        for(u32_t ii = 0; ii<IRRes.size(); ii++){
         for (const auto& intervalMat : IRRes) {
             std::cout << "IntervalMatrix :\n";
             std::cout << "Rows: " << intervalMat.rows() << ", Columns: " << intervalMat.cols() << "\n";
-            for (int k = 0; k < intervalMat.rows(); ++k) {
-                for (int j = 0; j < intervalMat.cols(); ++j) {
+            for (u32_t k = 0; k < intervalMat.rows(); ++k) {
+                for (u32_t j = 0; j < intervalMat.cols(); ++j) {
                     std::cout<< "[ "<< intervalMat(k, j).lb().getRealNumeral()<<", "<< intervalMat(k, j).ub().getRealNumeral() <<" ]"<< "\t";
                 }
                 std::cout << std::endl;

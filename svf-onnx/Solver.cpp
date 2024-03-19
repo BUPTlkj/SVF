@@ -2,16 +2,16 @@
 
 using namespace SVF;
 
-std::vector<Eigen::MatrixXd> SolverEvaluate::ReLuNeuronNodeevaluate() const{
+Matrices SolverEvaluate::ReLuNeuronNodeevaluate() const{
     std::cout<<"Reluing....."<<std::endl;
-    std::vector<Eigen::MatrixXd> x_out;
-    for (Eigen::MatrixXd mat : in_x) {
+    Matrices x_out;
+    for (Mat mat : in_x) {
         /* rows cols
             * Construct a List
          */
-        Eigen::MatrixXd o(mat.rows(), mat.cols());
-        for (unsigned i = 0; i < mat.rows(); i++) {
-            for (unsigned j = 0; j < mat.cols(); j++) {
+        Mat o(mat.rows(), mat.cols());
+        for (u32_t i = 0; i < mat.rows(); i++) {
+            for (u32_t j = 0; j < mat.cols(); j++) {
                 o(i, j) = std::max(0.0, mat(i, j));
             }
         }
@@ -21,11 +21,11 @@ std::vector<Eigen::MatrixXd> SolverEvaluate::ReLuNeuronNodeevaluate() const{
     return x_out;
 }
 
-std::vector<Eigen::MatrixXd> SolverEvaluate::BasicOPNeuronNodeevaluate( const BasicOPNeuronNode *basic) const{
+Matrices SolverEvaluate::BasicOPNeuronNodeevaluate( const BasicOPNeuronNode *basic) const{
     std::cout<<"BasicNoding......"<<std::endl;
 
 
-    std::vector<Eigen::MatrixXd> result;
+    Matrices result;
 
     /// ensure A and B the number of depth equal
     auto constant = basic->constant;
@@ -44,7 +44,7 @@ std::vector<Eigen::MatrixXd> SolverEvaluate::BasicOPNeuronNodeevaluate( const Ba
 
         /// Create a matrix of the same size as the channel of A,
         /// where all elements are the corresponding channel values of B
-        Eigen::MatrixXd temp = Eigen::MatrixXd::Constant(in_x[i].rows(), in_x[i].cols(), constant[i](0,0));
+        Mat temp = Mat::Constant(in_x[i].rows(), in_x[i].cols(), constant[i](0,0));
 
         /// Subtract the channel of A from the above matrix
 
@@ -66,9 +66,9 @@ std::vector<Eigen::MatrixXd> SolverEvaluate::BasicOPNeuronNodeevaluate( const Ba
     return result;
 }
 
-std::vector<Eigen::MatrixXd> SolverEvaluate::MaxPoolNeuronNodeevaluate( const MaxPoolNeuronNode *maxpool) const{
+Matrices SolverEvaluate::MaxPoolNeuronNodeevaluate( const MaxPoolNeuronNode *maxpool) const{
     std::cout<<"Maxpooling....."<<std::endl;
-    std::vector<Eigen::MatrixXd> out_x;
+    Matrices out_x;
     auto in_height = in_x[0].rows();
     auto in_width = in_x[0].cols();
     auto pad_height = maxpool->pad_height;
@@ -80,23 +80,23 @@ std::vector<Eigen::MatrixXd> SolverEvaluate::MaxPoolNeuronNodeevaluate( const Ma
 
     for (size_t depth = 0; depth < in_x.size(); ++depth) {
         /// Padding
-        unsigned padded_height = in_height + 2 * pad_height;
-        unsigned padded_width = in_width + 2 * pad_width;
-        Eigen::MatrixXd paddedMatrix = Eigen::MatrixXd::Zero(padded_height, padded_width);
+        u32_t padded_height = in_height + 2 * pad_height;
+        u32_t padded_width = in_width + 2 * pad_width;
+        Mat paddedMatrix = Mat::Zero(padded_height, padded_width);
         paddedMatrix.block(pad_height, pad_width, in_height, in_width) = in_x[depth];
 
         /// Calculate the size of the output feature map
-        unsigned outHeight = (padded_height - window_height) / stride_height + 1;
-        unsigned outWidth = (padded_width - window_width) / stride_width + 1;
-        Eigen::MatrixXd outMatrix(outHeight, outWidth);
+        u32_t outHeight = (padded_height - window_height) / stride_height + 1;
+        u32_t outWidth = (padded_width - window_width) / stride_width + 1;
+        Mat outMatrix(outHeight, outWidth);
 
-        for (unsigned i = 0; i < outHeight; ++i) {
-            for (unsigned j = 0; j < outWidth; ++j) {
+        for (u32_t i = 0; i < outHeight; ++i) {
+            for (u32_t j = 0; j < outWidth; ++j) {
                 double maxVal = -std::numeric_limits<double>::infinity();
-                for (unsigned m = 0; m < window_height; ++m) {
-                    for (unsigned n = 0; n < window_width; ++n) {
-                        unsigned rowIndex = i * stride_height + m;
-                        unsigned colIndex = j * stride_width + n;
+                for (u32_t m = 0; m < window_height; ++m) {
+                    for (u32_t n = 0; n < window_width; ++n) {
+                        u32_t rowIndex = i * stride_height + m;
+                        u32_t colIndex = j * stride_width + n;
                         double currentVal = paddedMatrix(rowIndex, colIndex);
                         if (currentVal > maxVal) {
                             maxVal = currentVal;
@@ -111,7 +111,7 @@ std::vector<Eigen::MatrixXd> SolverEvaluate::MaxPoolNeuronNodeevaluate( const Ma
     return out_x;
 }
 
-std::vector<Eigen::MatrixXd> SolverEvaluate::FullyConNeuronNodeevaluate( const FullyConNeuronNode *fully) const{
+Matrices SolverEvaluate::FullyConNeuronNodeevaluate( const FullyConNeuronNode *fully) const{
     std::cout<<"FullyConing......"<<std::endl;
     /// The step of processing input flattening operation is equivalent to the GEMM node operation in ONNX
     auto in_depth = in_x.size();
@@ -120,30 +120,30 @@ std::vector<Eigen::MatrixXd> SolverEvaluate::FullyConNeuronNodeevaluate( const F
     auto weight = fully->weight;
     auto bias = fully->bias;
 ///       1, b.size(), 1
-    unsigned out_width = 1;
-    unsigned out_height = bias.size();
-    unsigned out_depth = 1;
+    u32_t out_width = 1;
+    u32_t out_height = bias.size();
+    u32_t out_depth = 1;
 
-    Eigen::VectorXd x_ser(in_depth * in_height * in_width);
-    for (unsigned i = 0; i < in_depth; i++) {
-        for (unsigned j = 0; j < in_height; j++) {
-            for (unsigned k = 0; k < in_width; k++) {
+    Vector x_ser(in_depth * in_height * in_width);
+    for (u32_t i = 0; i < in_depth; i++) {
+        for (u32_t j = 0; j < in_height; j++) {
+            for (u32_t k = 0; k < in_width; k++) {
                 x_ser(in_width * in_depth * j + in_depth * k + i) = in_x[i](j, k);
             }
         }
     }
 
     ///wx+b
-    Eigen::VectorXd val = weight * x_ser + bias;
+    Vector val = weight * x_ser + bias;
 
     /// Restore output
-    std::vector<Eigen::MatrixXd> out;
+    Matrices out;
 
     /// Assignment
-    for (unsigned i = 0; i < out_depth; i++) {
-        out.push_back(Eigen::MatrixXd(out_height, out_width));
-        for (unsigned j = 0; j < out_height; j++) {
-            for (unsigned k = 0; k < out_width; k++) {
+    for (u32_t i = 0; i < out_depth; i++) {
+        out.push_back(Mat(out_height, out_width));
+        for (u32_t j = 0; j < out_height; j++) {
+            for (u32_t k = 0; k < out_width; k++) {
                 out[i](j, k) = val(out_width * out_depth * j + out_depth * k + i);
             }
         }
@@ -151,10 +151,10 @@ std::vector<Eigen::MatrixXd> SolverEvaluate::FullyConNeuronNodeevaluate( const F
     return out;
 }
 
-std::vector<Eigen::MatrixXd> SolverEvaluate::ConvNeuronNodeevaluate( const ConvNeuronNode *conv) const{
+Matrices SolverEvaluate::ConvNeuronNodeevaluate( const ConvNeuronNode *conv) const{
     std::cout<<"ConvNodeing......"<<conv->getId()<<std::endl;
 
-    unsigned filter_num = conv->get_filter_num();
+    u32_t filter_num = conv->get_filter_num();
     auto stride = conv->get_stride();
     auto padding = conv->get_padding();
     auto filter = conv->get_filter();
@@ -166,24 +166,24 @@ std::vector<Eigen::MatrixXd> SolverEvaluate::ConvNeuronNodeevaluate( const ConvN
     auto out_width = ((in_x[0].cols() - filter[0].get_width() + 2*padding) / stride) + 1;
 
     /// Padding
-    std::vector<Eigen::MatrixXd> padded_x(in_x.size());
-    for (size_t i = 0; i < in_x.size(); ++i) {
-        padded_x[i] = Eigen::MatrixXd::Zero(in_x[i].rows() + 2*padding, in_x[i].cols() + 2*padding);
+    Matrices padded_x(in_x.size());
+    for (u32_t i = 0; i < in_x.size(); ++i) {
+        padded_x[i] = Mat::Zero(in_x[i].rows() + 2*padding, in_x[i].cols() + 2*padding);
         padded_x[i].block(padding, padding, in_x[i].rows(), in_x[i].cols()) = in_x[i];
     }
 
     /// Calculate the output feature map based on filling and step size
-    std::vector<Eigen::MatrixXd> out(filter_num, Eigen::MatrixXd(out_height, out_width));
-    for (int i = 0; i < filter_num; i++) {
-        for (int j = 0; j < out_width; j++) {
-            for (int k = 0; k < out_height; k++) {
+    Matrices out(filter_num, Mat(out_height, out_width));
+    for (u32_t i = 0; i < filter_num; i++) {
+        for (u32_t j = 0; j < out_width; j++) {
+            for (u32_t k = 0; k < out_height; k++) {
                 double sum = 0;
-                for (int i_ = 0; i_ < filter_depth; i_++) {
-                    for (int j_ = 0; j_ < filter_height; j_++) {
-                        for (int k_ = 0; k_ < filter_width; k_++) {
+                for (u32_t i_ = 0; i_ < filter_depth; i_++) {
+                    for (u32_t j_ = 0; j_ < filter_height; j_++) {
+                        for (u32_t k_ = 0; k_ < filter_width; k_++) {
                             /// Strides
-                            int row = k * stride + j_;
-                            int col = j * stride + k_;
+                            u32_t row = k * stride + j_;
+                            u32_t col = j * stride + k_;
                             if (row < padded_x[i_].rows() && col < padded_x[i_].cols()) {
                                 sum += filter[i].value[i_](j_, k_) * padded_x[i_](row, col);
                             }
@@ -198,7 +198,7 @@ std::vector<Eigen::MatrixXd> SolverEvaluate::ConvNeuronNodeevaluate( const ConvN
     return out;
 }
 
-std::vector<Eigen::MatrixXd> SolverEvaluate::ConstantNeuronNodeevaluate() const{
+Matrices SolverEvaluate::ConstantNeuronNodeevaluate() const{
     std::cout<<"Constanting......."<<std::endl;
     /// This is an entry, nothing needs to do.
     return in_x;

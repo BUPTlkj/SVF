@@ -9,9 +9,12 @@
 
 namespace SVF{
 
+typedef std::vector<Eigen::MatrixXd> Matrices;
+typedef Eigen::MatrixXd Mat;
+typedef Eigen::VectorXd Vector;
 typedef Eigen::Matrix<IntervalValue, Eigen::Dynamic, Eigen::Dynamic> IntervalMat;
 typedef std::vector<IntervalMat> IntervalMatrices;
-typedef Eigen::Matrix<IntervalValue, Eigen::Dynamic, 1> IntervalVector; // Eigen::VectorXd
+typedef Eigen::Matrix<IntervalValue, Eigen::Dynamic, 1> IntervalVector;
 
 
 class NeuronNode;
@@ -46,8 +49,8 @@ public:
         Div           //9
     };
 
-    typedef NeuronEdge::NeuronGraphEdgeSetTy::iterator iterator; // 边 点  可以修改
-    typedef NeuronEdge::NeuronGraphEdgeSetTy::const_iterator const_iterator; //边 点，不可以修改
+    typedef NeuronEdge::NeuronGraphEdgeSetTy::iterator iterator;
+    typedef NeuronEdge::NeuronGraphEdgeSetTy::const_iterator const_iterator;
     typedef std::list<const NeuronNode*> NeuronNodeList;
     typedef std::list<const NeuronEdge*> NeuronEdgeList;
 
@@ -104,21 +107,24 @@ protected:
 /// For conv
 class FilterSubNode{
 public:
-    std::vector<Eigen::MatrixXd> value;
-    FilterSubNode(const std::vector<Eigen::MatrixXd>& x){
-        for (unsigned i = 0; i < x.size(); i++) {
-            for (unsigned j = 0; j < x.size(); j++) {
+    Matrices value;
+    IntervalMatrices Intervalvalue;
+    FilterSubNode(const Matrices& x, const IntervalMatrices intermat){
+        for (u32_t i = 0; i < x.size(); i++) {
+            for (u32_t j = 0; j < x.size(); j++) {
                 if (x[i].rows() != x[j].rows() || x[i].cols() != x[j].cols()) {
                     throw std::runtime_error("Bad construction of Filter");
                 }
             }
         }
         value = x;
+        Intervalvalue = intermat;
     }
 
-    unsigned get_depth() const;
-    unsigned get_height() const;
-    unsigned get_width() const;
+    /// Interval & Mat
+    u32_t get_depth() const;
+    u32_t get_height() const;
+    u32_t get_width() const;
 
     double dot_product(const FilterSubNode& val_f) const;
 
@@ -156,13 +162,13 @@ public:
 
 class BasicOPNeuronNode:public NeuronNode{
 public:
-    std::vector<Eigen::MatrixXd> constant;
-//    IntervalMat Intervalconstant;
+    Matrices constant;
+    IntervalMatrices Intervalconstant;
     std::string oper;
 
     /// Build Add/Sub/Mul/Div node
-    BasicOPNeuronNode(NodeID id, const std::string op, const std::vector<Eigen::MatrixXd>& w):
-          NeuronNode(id, BasicOPNode), constant{w}, oper{op}{};
+    BasicOPNeuronNode(NodeID id, const std::string op, const Matrices& w, const IntervalMatrices ic):
+          NeuronNode(id, BasicOPNode), constant{w}, Intervalconstant{ic}, oper{op} {};
 
     static inline bool classof(const BasicOPNeuronNode *)
     {
@@ -179,7 +185,7 @@ public:
         return node->getNodeKind() == BasicOPNode;
     }
 public:
-    inline std::vector<Eigen::MatrixXd> get_constant() const;
+    inline Matrices get_constant() const;
     inline std::string get_oper() const;
 
 public:
@@ -191,15 +197,15 @@ public:
 class MaxPoolNeuronNode:public NeuronNode{
 public:
     /// Define the windows size
-    unsigned window_width;
-    unsigned window_height;
-    unsigned stride_width;
-    unsigned stride_height;
-    unsigned pad_width;
-    unsigned pad_height;
+    u32_t window_width;
+    u32_t window_height;
+    u32_t stride_width;
+    u32_t stride_height;
+    u32_t pad_width;
+    u32_t pad_height;
 
     /// Bulid a maxpooling node
-    MaxPoolNeuronNode(NodeID id, unsigned ww, unsigned wh, unsigned sw, unsigned sh, unsigned pw, unsigned ph):
+    MaxPoolNeuronNode(NodeID id, u32_t ww, u32_t wh, u32_t sw, u32_t sh, u32_t pw, u32_t ph):
           NeuronNode(id, MaxPoolNode), window_width{ww}, window_height{wh},
           stride_width(sw), stride_height(sh),
           pad_width(pw), pad_height(ph){
@@ -222,12 +228,12 @@ public:
     }
 
 public:
-    inline unsigned get_window_width() const;
-    inline unsigned get_window_height() const;
-    inline unsigned get_stride_width() const;
-    inline unsigned get_stride_height() const;
-    inline unsigned get_pad_width() const;
-    inline unsigned get_pad_height() const;
+    inline u32_t get_window_width() const;
+    inline u32_t get_window_height() const;
+    inline u32_t get_stride_width() const;
+    inline u32_t get_stride_height() const;
+    inline u32_t get_pad_width() const;
+    inline u32_t get_pad_height() const;
 
 public:
     NodeK get_type() const override;
@@ -238,12 +244,15 @@ public:
 
 class FullyConNeuronNode:public NeuronNode{
 public:
-    Eigen::MatrixXd weight;
-    Eigen::VectorXd bias;
+    Mat weight;
+    Vector bias;
+
+    IntervalMat Intervalweight;
+    IntervalMat Intervalbias;
 
     /// the most common
-    FullyConNeuronNode(NodeID id, const Eigen::MatrixXd& w, const Eigen::VectorXd& b):
-          NeuronNode(id, FullyConNode), weight{w}, bias{b}{
+    FullyConNeuronNode(NodeID id, const Mat& w, const Vector& b, const IntervalMat iw, const IntervalMat ib):
+          NeuronNode(id, FullyConNode), weight{w}, bias{b}, Intervalweight(iw), Intervalbias(ib){
     }
     /// For Conv's filter op
     FullyConNeuronNode(): NeuronNode(-1,FullyConNode){};
@@ -264,8 +273,8 @@ public:
     }
 
 public:
-    inline Eigen::MatrixXd get_weight() const;
-    inline Eigen::VectorXd get_bias() const;
+    inline Mat get_weight() const;
+    inline Vector get_bias() const;
 
 
 public:
@@ -278,28 +287,29 @@ public:
 class ConvNeuronNode:public NeuronNode{
 public:
     /// filter
-    unsigned filter_depth;
-    unsigned filter_width;
-    unsigned filter_height;
+    u32_t filter_depth;
+    u32_t filter_width;
+    u32_t filter_height;
 
     /// filter_num
-    unsigned filter_num;
+    u32_t filter_num;
 
     /// filter
     std::vector<FilterSubNode> filter;
 
     /// bias
     std::vector<double> bias;
+    std::vector<IntervalValue> Intervalbias;
 
-    unsigned padding;
-    unsigned stride;
+    u32_t padding;
+    u32_t stride;
     // u32t
     // s32t
 
-    ConvNeuronNode(NodeID id, const std::vector<FilterSubNode>& fil, const std::vector<double> b, unsigned pad, unsigned str):
+    ConvNeuronNode(NodeID id, const std::vector<FilterSubNode>& fil, const std::vector<double> b, u32_t pad, u32_t str, const std::vector<IntervalValue> idouble):
           NeuronNode(id, ConstantNode),
           filter_depth{ fil[0].get_depth() }, filter_width{ fil[0].get_width() },filter_height{ fil[0].get_height() }, filter_num(fil.size()), filter(fil),
-          bias{b}, padding(pad), stride(str){
+          bias{b}, Intervalbias(idouble), padding(pad), stride(str){
         std::cout<<filter_num<<"   "<<filter_depth<<"   "<<filter_width<<"    "<<filter_height<<std::endl;
     }
 
@@ -319,16 +329,16 @@ public:
     }
 
 public:
-    inline unsigned get_filter_depth() const{
+    inline u32_t get_filter_depth() const{
         return filter_depth;
     };
-    inline unsigned get_filter_width() const{
+    inline u32_t get_filter_width() const{
         return filter_width;
     };
-    inline unsigned get_filter_height() const{
+    inline u32_t get_filter_height() const{
         return filter_height;
     };
-    inline unsigned get_filter_num() const{
+    inline u32_t get_filter_num() const{
         return filter_num;
     };
 
@@ -340,10 +350,10 @@ public:
         return bias;
     };
 
-    inline unsigned get_padding() const{
+    inline u32_t get_padding() const{
         return padding;
     };
-    inline unsigned get_stride() const{
+    inline u32_t get_stride() const{
         return stride;
     };
 

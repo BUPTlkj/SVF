@@ -1,4 +1,4 @@
-#include "CheckModels.h"
+#include "Loaddata.h"
 
 using namespace SVF;
 
@@ -32,7 +32,7 @@ std::pair<LabelVector, MatrixVector_3c> LoadData::read_dataset(){
             labels.push_back(label);
 
             /// mnist 1*28*28
-            std::vector<Eigen::MatrixXd> image_matrix(1, Eigen::MatrixXd(28, 28));
+            Matrices image_matrix(1, Mat(28, 28));
             unsigned channel = 0, row = 0, col = 0;
 
             /// Image Matrix
@@ -72,12 +72,12 @@ std::pair<LabelVector, MatrixVector_3c> LoadData::read_dataset(){
             std::string value;
 
             getline(ss, value, ',');
-            signed label = std::stoi(value);
+            s32_t label = std::stoi(value);
             labels.push_back(label);
 
             /// cifar10, 3*32*32
-            std::vector<Eigen::MatrixXd> image_matrix(3, Eigen::MatrixXd(32, 32));
-            unsigned channel = 0, row = 0, col = 0;
+            Matrices image_matrix(3, Mat(32, 32));
+            u32_t channel = 0, row = 0, col = 0;
 
             while(getline(ss,value,',')) {
                 image_matrix[channel](row, col) = std::stof(value)/(255.0);
@@ -109,15 +109,15 @@ std::vector<LabelAndBounds> LoadData::perturbateImages(
     std::vector<LabelAndBounds> result;
 
     for (size_t i = 0; i < labelImagePairs.first.size(); ++i) {
-        signed label = labelImagePairs.first[i];
-        const std::vector<Eigen::MatrixXd>& originalMatrix = labelImagePairs.second[i];
+        s32_t label = labelImagePairs.first[i];
+        const Matrices& originalMatrix = labelImagePairs.second[i];
 
-        std::vector<Eigen::MatrixXd> matrix_lb;
-        std::vector<Eigen::MatrixXd> matrix_ub;
+        Matrices matrix_lb;
+        Matrices matrix_ub;
 
         for (const auto& matrix : originalMatrix) {
-            Eigen::MatrixXd lb = matrix.array() - eps;
-            Eigen::MatrixXd ub = matrix.array() + eps;
+            Mat lb = matrix.array() - eps;
+            Mat ub = matrix.array() + eps;
 
             lb = lb.cwiseMax(0.0).cwiseMin(1.0);
             ub = ub.cwiseMax(0.0).cwiseMin(1.0);

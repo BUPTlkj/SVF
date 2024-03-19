@@ -8,9 +8,9 @@ add_executable(svf-onnx
         Solver.cpp
         Solver.h
         Solver.h
-        CheckModels.cpp
-        CheckModels.h
-        CheckModels.h
+        Loaddata.cpp
+        Loaddata.h
+        Loaddata.h
         IntervalSolver.cpp
         IntervalSolver.h)
 

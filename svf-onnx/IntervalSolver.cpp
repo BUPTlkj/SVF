@@ -8,18 +8,16 @@ bool isDouble(T&& var) {
 
 template<typename T>
 bool isInt(T&& var) {
-    return std::is_same<typename std::remove_cv<typename std::remove_reference<T>::type>::type, int>::value;
+    return std::is_same<typename std::remove_cv<typename std::remove_reference<T>::type>::type, u32_t>::value;
 }
 
-
 //typedef Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic> myMatrixXd;
-
 void IntervalSolver::initializeMatrix() {
 
 //    typedef Eigen::Matrix<IntervalValue, Eigen::Dynamic, Eigen::Dynamic> myMatrixXd;
-//    int a = 2;
-//    int b = 3;
-//    // int c = 2;
+//    u32_t a = 2;
+//    u32_t b = 3;
+//    // u32_t c = 2;
 //
 //    IntervalValue inv(0,1);
 //    IntervalValue inv2 = inv + inv;
@@ -50,17 +48,12 @@ void IntervalSolver::initializeMatrix() {
 //    myMatrixXd output = matrix * rhs;
 //
 //    std::cout << "Matrix 107:\n" << output(0,0) << std::endl;
-//    for (int i = 0; i < output.rows(); ++i) {
-//        for (int j = 0; j < output.cols(); ++j) {
+//    for (u32_t i = 0; i < output.rows(); ++i) {
+//        for (u32_t j = 0; j < output.cols(); ++j) {
 //            std::cout << output(i, j) << " ";
 //        }
 //        std::cout << std::endl;
 //    }
-
-
-
-
-
 
     /// Define ab
     Eigen::Matrix<IntervalValue, Eigen::Dynamic, Eigen::Dynamic> matrixq(2, 2);
@@ -83,82 +76,35 @@ void IntervalSolver::initializeMatrix() {
     Eigen::Matrix<IntervalValue, Eigen::Dynamic, Eigen::Dynamic> Matrix1;
     Eigen::Matrix<IntervalValue, Eigen::Dynamic, Eigen::Dynamic> Matrix2;
     Eigen::Matrix<IntervalValue, 2, 2> Matrix3;
-////    Eigen::Matrix<IntervalValue, Eigen::Dynamic, Eigen::Dynamic> Matrix4 = Matrix1 * Matrix2;
-//
-//    Eigen::Matrix<IntervalValue, Eigen::Dynamic, Eigen::Dynamic> Matrix6 = Matrix1 * Matrix3;
-//
-//    Eigen::Matrix<IntervalValue, Eigen::Dynamic, Eigen::Dynamic> Matrix5 = Matrix1 + Matrix2;
-//
 
     Eigen::Matrix<IntervalValue, Eigen::Dynamic,  Eigen::Dynamic>  c = aw * matrixq + aw;
-    for (int i = 0; i < c.rows(); ++i) {
-        for (int j = 0; j < c.cols(); ++j) {
+    for (u32_t i = 0; i < c.rows(); ++i) {
+        for (u32_t j = 0; j < c.cols(); ++j) {
             std::cout <<"[" << aw(i,j).lb().getRealNumeral() << ", "  << aw(i,j).ub().getRealNumeral()<< "]\t";
             std::cout << aw(i,j).toString()<< "]\t";
         }
         std::cout << std::endl;
     }
 
-    for (int i = 0; i < c.rows(); ++i) {
-        for (int j = 0; j < c.cols(); ++j) {
+    for (u32_t i = 0; i < c.rows(); ++i) {
+        for (u32_t j = 0; j < c.cols(); ++j) {
             std::cout <<"[" << c(i,j).lb().getRealNumeral() << ", "  << c(i,j).ub().getRealNumeral()<< "]\t";
-//            std::cout << c(i,j).toString() << "\t";
         }
         std::cout << std::endl;
     }
 }
 
-IntervalMatrices IntervalSolver::convertMatricesToIntervalMatrices(const std::vector<Eigen::MatrixXd>& matrices) {
-    IntervalMatrices intervalMatrices;
-
-    for (const auto& mat : matrices) {
-        Eigen::Matrix<IntervalValue, Eigen::Dynamic, Eigen::Dynamic> intervalMatrix(mat.rows(), mat.cols());
-        for (int i = 0; i < mat.rows(); ++i) {
-            for (int j = 0; j < mat.cols(); ++j) {
-                /// [x, x]
-                intervalMatrix(i, j) = IntervalValue(mat(i, j), mat(i, j));
-            }
-        }
-        intervalMatrices.push_back(intervalMatrix);
-    }
-    return intervalMatrices;
-}
-
-IntervalMat IntervalSolver::convertMatToIntervalMat(const Eigen::MatrixXd& matrix){
-
-    Eigen::Matrix<IntervalValue, Eigen::Dynamic, Eigen::Dynamic> intervalMatrix(matrix.rows(), matrix.cols());
-    for (int i = 0; i < matrix.rows(); ++i) {
-        for (int j = 0; j < matrix.cols(); ++j) {
-            /// [x, x]
-            intervalMatrix(i, j) = IntervalValue(matrix(i, j), matrix(i, j));
-        }
-    }
-    return intervalMatrix;
-}
-
-IntervalMat IntervalSolver::convertVectorXdToIntervalVector(const Eigen::VectorXd& vec) {
-    ///cols = 1
-    IntervalMat intervalMat(vec.size(), 1);
-
-    for (int i = 0; i < vec.size(); ++i) {
-        /// IntervalValue(double, double)
-        intervalMat(i, 0) = IntervalValue(vec(i), vec(i)); // 需要IntervalValue有一个接受两个double的构造函数
-    }
-
-    return intervalMat;
-}
-
-std::pair<std::vector<Eigen::MatrixXd>, std::vector<Eigen::MatrixXd>> IntervalSolver::splitIntervalMatrices(const std::vector<Eigen::Matrix<IntervalValue, Eigen::Dynamic, Eigen::Dynamic>>& intervalMatrices) {
-    std::vector<Eigen::MatrixXd> lowerBounds, upperBounds;
+std::pair<Matrices, Matrices> IntervalSolver::splitIntervalMatrices(const IntervalMatrices & intervalMatrices) {
+    Matrices lowerBounds, upperBounds;
 
     for (const auto& intervalMatrix : intervalMatrices) {
-        Eigen::MatrixXd lower(intervalMatrix.rows(), intervalMatrix.cols());
-        Eigen::MatrixXd upper(intervalMatrix.rows(), intervalMatrix.cols());
+        Mat lower(intervalMatrix.rows(), intervalMatrix.cols());
+        Mat upper(intervalMatrix.rows(), intervalMatrix.cols());
 
-        for (int i = 0; i < intervalMatrix.rows(); ++i) {
-            for (int j = 0; j < intervalMatrix.cols(); ++j) {
-                lower(i, j) = intervalMatrix(i, j).lb().getNumeral();
-                upper(i, j) = intervalMatrix(i, j).ub().getNumeral();
+        for (u32_t i = 0; i < intervalMatrix.rows(); ++i) {
+            for (u32_t j = 0; j < intervalMatrix.cols(); ++j) {
+                lower(i, j) = intervalMatrix(i, j).lb().getRealNumeral();
+                upper(i, j) = intervalMatrix(i, j).ub().getRealNumeral();
             }
         }
 
@@ -169,18 +115,16 @@ std::pair<std::vector<Eigen::MatrixXd>, std::vector<Eigen::MatrixXd>> IntervalSo
     return {lowerBounds, upperBounds};
 }
 
-
-
 IntervalMatrices IntervalSolver::ReLuNeuronNodeevaluate() const {
     std::cout << "Reluing....." << std::endl;
     IntervalMatrices x_out;
-    for (const auto& mat : in_x) { // using auto& avoid copy
-        Eigen::Matrix<IntervalValue, Eigen::Dynamic, Eigen::Dynamic> o(mat.rows(), mat.cols());
+    for (const auto& mat : in_x) { /// using auto& avoid copy
+        IntervalMat o(mat.rows(), mat.cols());
         for (u32_t i = 0; i < mat.rows(); i++) {
             for (u32_t j = 0; j < mat.cols(); j++) {
                 const auto& iv = mat(i, j); /// Current interval
-                double lb = iv.lb().getNumeral(); /// lower bound
-                double ub = iv.ub().getNumeral(); /// upper bound
+                double lb = iv.lb().getRealNumeral(); /// lower bound
+                double ub = iv.ub().getRealNumeral(); /// upper bound
 
                 /// Relu
                 double newLb = std::max(0.0, lb);
@@ -194,16 +138,13 @@ IntervalMatrices IntervalSolver::ReLuNeuronNodeevaluate() const {
     return x_out;
 }
 
-
 IntervalMatrices IntervalSolver::BasicOPNeuronNodeevaluate( const BasicOPNeuronNode *basic){
     std::cout<<"BasicNoding...... The input size: "<<in_x.size()<<std::endl;
 
     IntervalMatrices result;
 
     /// ensure A and B the number of depth equal
-    auto constant = basic->constant;
-
-    auto Intervalconstant = convertMatricesToIntervalMatrices(constant);
+    IntervalMatrices Intervalconstant = basic->Intervalconstant;
 
     if (in_x.size() != Intervalconstant.size()) {
         std::cout<<"In_x.size(): "<<in_x.size()<<",  "<<"Intervalconstant.size()): "<<Intervalconstant.size()<<std::endl;
@@ -213,19 +154,22 @@ IntervalMatrices IntervalSolver::BasicOPNeuronNodeevaluate( const BasicOPNeuronN
 
     for (size_t i = 0; i < in_x.size(); ++i) {
         /// ensure the size of each channel correct
-        if (constant[i].rows() != 1 || constant[i].cols() != 1) {
+        if (Intervalconstant[i].rows() != 1 || Intervalconstant[i].cols() != 1) {
             std::cerr << "Error: B's channel matrices must be 1x1." << std::endl;
             return result;
         }
 
         /// Create a matrix of the same size as the channel of A,
         /// where all elements are the corresponding channel values of B
-        Eigen::MatrixXd temp = Eigen::MatrixXd::Constant(in_x[i].rows(), in_x[i].cols(), constant[i](0,0));
-
-        auto Intervaltemp = convertMatToIntervalMat(temp);
+        IntervalMat Intervaltemp(
+            in_x[i].rows(), in_x[i].cols());
+        for (u32_t j = 0; j < Intervaltemp.rows(); ++j) {
+            for (u32_t k = 0; k < Intervaltemp.cols(); ++k) {
+                Intervaltemp(j, k) = IntervalValue(Intervalconstant[i](0,0).lb(), Intervalconstant[i](0,0).ub());
+            }
+        }
 
         /// Subtract the channel of A from the above matrix
-
         if(basic->get_type() == 7){
             result.emplace_back(in_x[i] + Intervaltemp);
         }else if(basic->get_type() == 6){
@@ -233,9 +177,9 @@ IntervalMatrices IntervalSolver::BasicOPNeuronNodeevaluate( const BasicOPNeuronN
         }else if(basic->get_type() == 8){
             result.emplace_back(in_x[i].cwiseProduct(Intervaltemp));
         }else if(basic->get_type() == 9){
-            if (constant[i](0, 0) == 0) {
+            if (Intervalconstant[i](0, 0).ub().getRealNumeral() == 0) {
                 std::cerr << "Error: Division by zero." << std::endl;
-                assert(!(constant[i](0, 0) == 0));
+                assert(!(Intervalconstant[i](0, 0).getRealNumeral() == 0));
             }else{
                 result.emplace_back(in_x[i].cwiseQuotient(Intervaltemp));
             }
@@ -260,16 +204,16 @@ IntervalMatrices IntervalSolver::MaxPoolNeuronNodeevaluate( const MaxPoolNeuronN
     /// IntervalMatrix -> (upper mat, lower mat)->  ( maxpooling(upper mat), maxpooling(lower mat)) ->IntervalMatrix
 
     /// convert IntervalMatrix into UpperMatrix & LowerMatrix
-    /// std::vector<Eigen::MatrixXd>
-    std::vector<Eigen::MatrixXd> Uppermat = splitIntervalMatrices(in_x).second;
-    std::vector<Eigen::MatrixXd> Lowermat = splitIntervalMatrices(in_x).first;
+    /// Matrices
+    Matrices Uppermat = splitIntervalMatrices(in_x).second;
+    Matrices Lowermat = splitIntervalMatrices(in_x).first;
 
     for (u32_t depth = 0; depth < in_x.size(); ++depth) {
         /// Padding
         u32_t padded_height = in_height + 2 * pad_height;
         u32_t padded_width = in_width + 2 * pad_width;
-        Eigen::MatrixXd paddedMatrixU = Eigen::MatrixXd::Zero(padded_height, padded_width);
-        Eigen::MatrixXd paddedMatrixL = Eigen::MatrixXd::Zero(padded_height, padded_width);
+        Mat paddedMatrixU = Mat::Zero(padded_height, padded_width);
+        Mat paddedMatrixL = Mat::Zero(padded_height, padded_width);
 
         paddedMatrixU.block(pad_height, pad_width, in_height, in_width) = Uppermat[depth];
         paddedMatrixL.block(pad_height, pad_width, in_height, in_width) = Lowermat[depth];
@@ -277,8 +221,8 @@ IntervalMatrices IntervalSolver::MaxPoolNeuronNodeevaluate( const MaxPoolNeuronN
         /// Calculate the size of the output feature map
         u32_t outHeight = (padded_height - window_height) / stride_height + 1;
         u32_t outWidth = (padded_width - window_width) / stride_width + 1;
-        Eigen::MatrixXd outMatrixU(outHeight, outWidth);
-        Eigen::MatrixXd outMatrixL(outHeight, outWidth);
+        Mat outMatrixU(outHeight, outWidth);
+        Mat outMatrixL(outHeight, outWidth);
 
         for (u32_t i = 0; i < outHeight; ++i) {
             for (u32_t j = 0; j < outWidth; ++j) {
@@ -304,10 +248,10 @@ IntervalMatrices IntervalSolver::MaxPoolNeuronNodeevaluate( const MaxPoolNeuronN
         /// IntervalMat，(outMatrixU, outMatrixL)
         IntervalMat intervalMatrix(outHeight, outWidth);
 
-        for (int i = 0; i < outHeight; ++i) {
-            for (int j = 0; j < outWidth; ++j) {
-                double lower = outMatrixL(i, j); // 下界值
-                double upper = outMatrixU(i, j); // 上界值
+        for (u32_t i = 0; i < outHeight; ++i) {
+            for (u32_t j = 0; j < outWidth; ++j) {
+                double lower = outMatrixL(i, j); /// upper
+                double upper = outMatrixU(i, j); /// lower
 
                 intervalMatrix(i, j) = IntervalValue(lower, upper);
             }
@@ -324,8 +268,8 @@ IntervalMatrices IntervalSolver::FullyConNeuronNodeevaluate( const FullyConNeuro
     u32_t in_height = in_x[0].rows();
     u32_t in_width = in_x[0].cols();
 
-    IntervalMat Intervalweight = convertMatToIntervalMat(fully->weight);
-    IntervalMat Intervalbias = convertVectorXdToIntervalVector(fully->bias);
+    IntervalMat Intervalweight = fully->Intervalweight;
+    IntervalMat Intervalbias = fully->Intervalbias;
 
     ///  1, b.size(), 1
     u32_t out_width = 1;
@@ -344,15 +288,14 @@ IntervalMatrices IntervalSolver::FullyConNeuronNodeevaluate( const FullyConNeuro
     }
 
     ///wx+b
-    Eigen::Matrix<IntervalValue, Eigen::Dynamic, Eigen::Dynamic> val = Intervalweight * x_ser + Intervalbias;
-
+    IntervalMat val = Intervalweight * x_ser + Intervalbias;
 
     /// Restore output
     IntervalMatrices out;
 
     /// Assignment
     for (u32_t i = 0; i < out_depth; i++) {
-        out.push_back(Eigen::Matrix<IntervalValue, Eigen::Dynamic, Eigen::Dynamic>(out_height, out_width));
+        out.push_back(IntervalMat(out_height, out_width));
         for (u32_t j = 0; j < out_height; j++) {
             for (u32_t k = 0; k < out_width; k++) {
                 out[i](j, k) = val(out_width * out_depth * j + out_depth * k + i,0);
@@ -373,13 +316,7 @@ IntervalMatrices IntervalSolver::ConvNeuronNodeevaluate( const ConvNeuronNode *c
     u32_t filter_depth = conv->get_filter_depth();
     u32_t filter_height = conv->get_filter_height();
     u32_t filter_width = conv->get_filter_width();
-    std::vector<double> bias = conv->get_bias();
-    std::vector<SVF::IntervalValue> intervalbias;
-
-    for (double val : bias) {
-        SVF::IntervalValue intervalValue(val, val);
-        intervalbias.push_back(intervalValue);
-    }
+    std::vector<SVF::IntervalValue> intervalbias = conv->Intervalbias;
 
     u32_t out_height = ((in_x[0].rows() - filter[0].get_height() + 2*padding) / stride) + 1;
     u32_t out_width = ((in_x[0].cols() - filter[0].get_width() + 2*padding) / stride) + 1;
@@ -387,7 +324,16 @@ IntervalMatrices IntervalSolver::ConvNeuronNodeevaluate( const ConvNeuronNode *c
     /// Padding
     IntervalMatrices padded_x(in_x.size());
     for (u32_t i = 0; i < in_x.size(); ++i) {
-        padded_x[i] = convertMatToIntervalMat(Eigen::MatrixXd::Zero(in_x[i].rows() + 2*padding, in_x[i].cols() + 2*padding));
+        for (size_t j = 0; j < in_x.size(); ++j){
+            padded_x[j] = IntervalMat(in_x[j].rows() + 2 * padding, in_x[j].cols() + 2 * padding);
+
+            /// [0.0, 0.0]
+            for (u32_t k = 0; k < padded_x[j].rows(); ++k){
+                for (u32_t l = 0; l < padded_x[j].cols(); ++l){
+                    padded_x[j](k, l) = IntervalValue(0.0, 0.0);
+                }
+            }
+        }
         padded_x[i].block(padding, padding, in_x[i].rows(), in_x[i].cols()) = in_x[i];
     }
 
@@ -403,9 +349,9 @@ IntervalMatrices IntervalSolver::ConvNeuronNodeevaluate( const ConvNeuronNode *c
                         for (u32_t k_ = 0; k_ < filter_width; k_++) {
                             /// Strides
                             u32_t row = k * stride + j_;
-                            int col = j * stride + k_;
+                            u32_t col = j * stride + k_;
                             if (row < padded_x[i_].rows() && col < padded_x[i_].cols()) {
-                                sum += convertMatricesToIntervalMatrices(filter[i].value)[i_](j_, k_) * padded_x[i_](row, col);
+                                sum += filter[i].Intervalvalue[i_](j_, k_) * padded_x[i_](row, col);
                             }
                         }
                     }
@@ -418,8 +364,8 @@ IntervalMatrices IntervalSolver::ConvNeuronNodeevaluate( const ConvNeuronNode *c
     return out;
 }
 
-IntervalMatrices IntervalSolver::ConstantNeuronNodeevaluate(){
-    std::cout<<"Constanting....... The input size: ("<<in_x.size()<<", "<<in_x[0].rows()<<", "<<in_x[0].cols()<<")"<<std::endl;
+IntervalMatrices IntervalSolver::ConstantNeuronNodeevaluate() const{
+    std::cout<<"Constanting....... "<<std::endl;
     /// This is an entry, nothing needs to do.
     return in_x;
 }

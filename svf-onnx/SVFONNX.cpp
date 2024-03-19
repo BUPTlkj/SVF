@@ -1,16 +1,17 @@
 #include "SVFONNX.h"
-#include "CheckModels.h"
-#include <algorithm> /// For std::remove
 #include "IntervalSolver.h"
+#include "Loaddata.h"
+#include "Solver.h"
+#include <algorithm> /// For std::remove
 /// Parse function to extract integers from a given string and return their
 /// vectors
 
 using namespace SVF;
 
-std::vector<int> SVFNN::parseDimensions(const std::string& input) {
-    std::vector<int> dimensions;
+std::vector<u32_t> SVFNN::parseDimensions(const std::string& input) {
+    std::vector<u32_t> dimensions;
     std::stringstream ss(input);
-    int number;
+    u32_t number;
     char comma;
 
     while (ss >> number) {
@@ -42,13 +43,13 @@ SVFNN::SVFNN(std::string adress): onnxAdress{adress}{
 /// Put it here?? Need for optimization
     ConstantNodeInfo constantnode;
     BasicNodeInfo basicnode;
-    ParsedGEMMParams gemmnode;
+    FullyconnectedInfo gemmnode;
     ConvNodeInfo convnode;
     ReluNodeInfo relunode;
     MaxPoolNodeInfo maxpoolnode;
 
-    std::map<std::string, std::pair<std::pair<int, int>, std::pair<int, int>>> convItems;
-    std::map<std::string, std::pair<std::pair<int, int>, std::pair<std::pair<int, int>, std::pair<int, int>>>>  maxPoolItems;
+    std::map<std::string, std::pair<std::pair<u32_t, u32_t>, std::pair<u32_t, u32_t>>> convItems;
+    std::map<std::string, std::pair<std::pair<u32_t, u32_t>, std::pair<std::pair<u32_t, u32_t>, std::pair<u32_t, u32_t>>>>  maxPoolItems;
 
     for(const auto& pair : cppMapa) {
         /// Key: pair.first  Value: pair.second
@@ -89,14 +90,17 @@ SVFNN::SVFNN(std::string adress): onnxAdress{adress}{
                     basicnode = parseBasicNodeString(nodeDataParts[2]);
                     basicnode.typestr = nodeDataParts[0];
                     basicnode.name = name;
+                    basicnode.Intervalvalues = convertMatricesToIntervalMatrices(basicnode.values);
                     nodes.push_back(basicnode);
                 }else if(name.find(Gemm) != std::string::npos){
                     gemmnode = GEMMparseAndFormat(nodeDataParts[2]);
                     gemmnode.gemmName = name;
-                    Eigen::MatrixXd weight = restoreGEMMWeightToMatrix(gemmnode.weightDimensions, gemmnode.weightValues);
-                    Eigen::MatrixXd bias = restoreGEMMBiasMatrixFromStrings(gemmnode.biasDimensions, gemmnode.biasValues);
+                    Mat weight = restoreGEMMWeightToMatrix(gemmnode.weightDimensions, gemmnode.weightValues);
+                    Mat bias = restoreGEMMBiasMatrixFromStrings(gemmnode.biasDimensions, gemmnode.biasValues);
                     gemmnode.weight = weight;
                     gemmnode.bias = bias;
+                    gemmnode.Intervalweight = convertMatToIntervalMat(weight);
+                    gemmnode.Intervalbias = convertMatToIntervalMat(bias);
                     nodes.push_back(gemmnode);
                 }else if(name.find(Conv) != std::string::npos){
                     /// Refer to GEMM
@@ -105,6 +109,11 @@ SVFNN::SVFNN(std::string adress): onnxAdress{adress}{
                     std::cout<<"**********"<<conf.filterDims<<std::endl<<conf.filterValue<<std::endl;
                     convnode.filter = parse_filters(conf.filterValue, parseDimensions(conf.filterDims)[0], parseDimensions(conf.filterDims)[1], parseDimensions(conf.filterDims)[2], parseDimensions(conf.filterDims)[3] );
                     convnode.conbias = parse_Convbiasvector(conf.biasValue);
+
+                    for (double val : convnode.conbias) {
+                        SVF::IntervalValue intervalValue(val, val);
+                        convnode.Intervalbias.push_back(intervalValue);
+                    }
                     convnode.name = name;
                     /// Add strides info
                     if (convItems.find(name) != convItems.end()){
@@ -157,13 +166,13 @@ std::pair<std::string, std::string> SVFNN::parseItem(const std::string &item) {
     return {"", ""}; /// Returns an empty key value pair, indicating parsing failure
 }
 
-std::map<std::string, std::pair<std::pair<int, int>, std::pair<int, int>>> SVFNN::parseConvItems(const std::vector<std::string> &items) {
-    std::map<std::string, std::pair<std::pair<int, int>, std::pair<int, int>>> result;
+std::map<std::string, std::pair<std::pair<u32_t, u32_t>, std::pair<u32_t, u32_t>>> SVFNN::parseConvItems(const std::vector<std::string> &items) {
+    std::map<std::string, std::pair<std::pair<u32_t, u32_t>, std::pair<u32_t, u32_t>>> result;
     for (const auto& item : items) {
         auto key_value = parseItem(item);
         if (key_value.first.find("Conv") != std::string::npos) {
             /// if value's format is correct
-            int px, py, px_, py_, sx, sy;
+            u32_t px, py, px_, py_, sx, sy;
             sscanf(key_value.second.c_str(), " ['pads:', [%d, %d, %d, %d], 'strides:', [%d, %d]]", &px, &py, &px_, &py_, &sx, &sy); // 解析字符串为两个整数
             result[key_value.first] = std::make_pair(std::make_pair(px, py), std::make_pair(sx, sy));
         }
@@ -171,14 +180,14 @@ std::map<std::string, std::pair<std::pair<int, int>, std::pair<int, int>>> SVFNN
     return result;
 }
 
-std::map<std::string, std::pair<std::pair<int, int>, std::pair<std::pair<int, int>, std::pair<int, int>>>>
+std::map<std::string, std::pair<std::pair<u32_t, u32_t>, std::pair<std::pair<u32_t, u32_t>, std::pair<u32_t, u32_t>>>>
 SVFNN::parseMaxPoolItems(const std::vector<std::string> &items) {
-    std::map<std::string, std::pair<std::pair<int, int>, std::pair<std::pair<int, int>, std::pair<int, int>>>> result;
+    std::map<std::string, std::pair<std::pair<u32_t, u32_t>, std::pair<std::pair<u32_t, u32_t>, std::pair<u32_t, u32_t>>>> result;
     for (const auto& item : items) {
         auto key_value = parseItem(item);
         if (key_value.first.find("MaxPool") != std::string::npos) {
             /// if value's format is correct
-            int wx, wy, px, py, px_, py_, sx, sy;
+            u32_t wx, wy, px, py, px_, py_, sx, sy;
             sscanf(key_value.second.c_str(), " ['Windows:', [%d, %d], 'pads:', [%d, %d, %d, %d], 'strides:', [%d, %d]]", &wx, &wy, &px, &py,  &px_, &py_, &sx, &sy); // 解析字符串为四个整数
             result[key_value.first] = std::make_pair(std::make_pair(wx, wy), std::make_pair(std::make_pair(px, py), std::make_pair(sx, sy)));
         }
@@ -188,6 +197,67 @@ SVFNN::parseMaxPoolItems(const std::vector<std::string> &items) {
 
 std::vector<SVFNeuralNet> SVFNN::get_nodes(){
     return nodes;
+}
+
+IntervalMatrices SVFNN::convertMatricesToIntervalMatrices(const Matrices& matrices) {
+    IntervalMatrices intervalMatrices;
+
+    for (const auto& mat : matrices) {
+        IntervalMat intervalMatrix(mat.rows(), mat.cols());
+        for (u32_t i = 0; i < mat.rows(); ++i) {
+            for (u32_t j = 0; j < mat.cols(); ++j) {
+                /// [x, x]
+                intervalMatrix(i, j) = IntervalValue(mat(i, j), mat(i, j));
+            }
+        }
+        intervalMatrices.push_back(intervalMatrix);
+    }
+    return intervalMatrices;
+}
+
+IntervalMat SVFNN::convertMatToIntervalMat(const Mat& matrix){
+
+    IntervalMat intervalMatrix(matrix.rows(), matrix.cols());
+    for (u32_t i = 0; i < matrix.rows(); ++i) {
+        for (u32_t j = 0; j < matrix.cols(); ++j) {
+            /// [x, x]
+            intervalMatrix(i, j) = IntervalValue(matrix(i, j), matrix(i, j));
+        }
+    }
+    return intervalMatrix;
+}
+
+IntervalMat SVFNN::convertVectorXdToIntervalVector(const Vector& vec) {
+    ///cols = 1
+    IntervalMat intervalMat(vec.size(), 1);
+
+    for (u32_t i = 0; i < vec.size(); ++i) {
+        /// IntervalValue(double, double)
+        intervalMat(i, 0) = IntervalValue(vec(i), vec(i));
+    }
+
+    return intervalMat;
+}
+
+std::pair<Matrices, Matrices> SVFNN::splitIntervalMatrices(const IntervalMatrices & intervalMatrices) {
+    Matrices lowerBounds, upperBounds;
+
+    for (const auto& intervalMatrix : intervalMatrices) {
+        Mat lower(intervalMatrix.rows(), intervalMatrix.cols());
+        Mat upper(intervalMatrix.rows(), intervalMatrix.cols());
+
+        for (u32_t i = 0; i < intervalMatrix.rows(); ++i) {
+            for (u32_t j = 0; j < intervalMatrix.cols(); ++j) {
+                lower(i, j) = intervalMatrix(i, j).lb().getNumeral();
+                upper(i, j) = intervalMatrix(i, j).ub().getNumeral();
+            }
+        }
+
+        lowerBounds.push_back(lower);
+        upperBounds.push_back(upper);
+    }
+
+    return {lowerBounds, upperBounds};
 }
 
 std::string SVFNN::PyObjectToString(PyObject *pObj) {
@@ -307,7 +377,7 @@ BasicNodeInfo SVFNN::parseBasicNodeString(const std::string &nodeString) {
 
         for (; iter != end; ++iter) {
             double value = std::stod(*iter);
-            info.values.push_back(Eigen::MatrixXd::Constant(1, 1, value));
+            info.values.push_back(Mat::Constant(1, 1, value));
         }
 
         return info;
@@ -325,8 +395,8 @@ std::string SVFNN::trim(const std::string& str, const std::string& chars) {
 }
 
 /// Analyze and format weight and bias information
-ParsedGEMMParams SVFNN::GEMMparseAndFormat(const std::string& input) {
-    ParsedGEMMParams params;
+FullyconnectedInfo SVFNN::GEMMparseAndFormat(const std::string& input) {
+    FullyconnectedInfo params;
     std::regex re("'(.*?)': \\[\\((.*?)\\), \\[(.*?)\\]\\]");
 
     std::smatch match;
@@ -353,10 +423,10 @@ ParsedGEMMParams SVFNN::GEMMparseAndFormat(const std::string& input) {
     return params;
 }
 
-Eigen::MatrixXd SVFNN::restoreGEMMWeightToMatrix(const std::string& dimensions, const std::string& values) {
+Mat SVFNN::restoreGEMMWeightToMatrix(const std::string& dimensions, const std::string& values) {
     /// Analyze dimensions
     std::istringstream dimStream(dimensions);
-    int rows, cols;
+    u32_t rows, cols;
     char comma; /// For skipping commas
     dimStream >> rows >> comma >> cols;
 
@@ -373,14 +443,14 @@ Eigen::MatrixXd SVFNN::restoreGEMMWeightToMatrix(const std::string& dimensions, 
     /// Confirm the number of values to match the size of the matrix
     if (vals.size() != rows * cols) {
         std::cerr << "Value count does not match matrix dimensions!" << std::endl;
-        return Eigen::MatrixXd(0, 0); /// Empty Matrix
+        return Mat(0, 0); /// Empty Matrix
     }
 
     /// Padding matrix
-    Eigen::MatrixXd matrix(rows, cols);
+    Mat matrix(rows, cols);
 
-    for (int i = 0; i < rows; ++i) {
-        for (int j = 0; j < cols; ++j) {
+    for (u32_t i = 0; i < rows; ++i) {
+        for (u32_t j = 0; j < cols; ++j) {
             matrix(i, j) = vals[i * cols + j];
         }
     }
@@ -388,7 +458,7 @@ Eigen::MatrixXd SVFNN::restoreGEMMWeightToMatrix(const std::string& dimensions, 
     return matrix;
 }
 
-Eigen::VectorXd SVFNN::restoreGEMMBiasMatrixFromStrings(const std::string& dimensionStr, const std::string& valuesStr) {
+Vector SVFNN::restoreGEMMBiasMatrixFromStrings(const std::string& dimensionStr, const std::string& valuesStr) {
     /// Processing dimension strings, removing commas
     std::string dimStr = dimensionStr;
     if (!dimStr.empty() && dimStr.back() == ',') {
@@ -396,8 +466,8 @@ Eigen::VectorXd SVFNN::restoreGEMMBiasMatrixFromStrings(const std::string& dimen
     }
 
     /// Parsing dimension strings
-    int rows = 1;
-    int cols;
+    u32_t rows = 1;
+    u32_t cols;
     std::istringstream dimStream(dimStr);
     dimStream >> cols; // Read the number of columns
 
@@ -412,15 +482,15 @@ Eigen::VectorXd SVFNN::restoreGEMMBiasMatrixFromStrings(const std::string& dimen
     /// Ensure that the number of values matches the dimension
     if (values.size() != cols) {
         std::cerr << "Error: The number of values does not match the specified dimensions." << std::endl;
-        return Eigen::MatrixXd(); // Return an empty matrix
+        return Mat(); // Return an empty matrix
     }
 
     /// Fill the matrix with parsed values
-    Eigen::MatrixXd matrix(rows, cols);
-    for (int j = 0; j < cols; ++j) {
+    Mat matrix(rows, cols);
+    for (u32_t j = 0; j < cols; ++j) {
         matrix(0, j) = values[j];
     }
-    Eigen::VectorXd vec = Eigen::Map<Eigen::VectorXd>(matrix.data(), matrix.size());
+    Vector vec = Eigen::Map<Vector>(matrix.data(), matrix.size());
     return vec;
 }
 
@@ -455,8 +525,8 @@ ConvParams SVFNN::ConvparseAndFormat(const std::string& input) {
     return params;
 }
 
-std::vector<FilterSubNode> SVFNN::parse_filters(const std::string &s, unsigned int num_filters, unsigned int kernel_height,
-                                         unsigned int kernel_width, unsigned int kernel_depth)  {
+std::vector<FilterSubNode> SVFNN::parse_filters(const std::string &s, u32_t num_filters,  u32_t kernel_height,
+                                          u32_t kernel_width,  u32_t kernel_depth)  {
     std::vector<std::vector<std::vector<std::vector<double>>>> data(num_filters, std::vector<std::vector<std::vector<double>>>(kernel_depth, std::vector<std::vector<double>>(kernel_height, std::vector<double>(kernel_width))));
 
     std::stringstream ss(s);
@@ -467,10 +537,10 @@ std::vector<FilterSubNode> SVFNN::parse_filters(const std::string &s, unsigned i
     }
     ss.unget(); /// Add the non-number into stream
 
-    for (unsigned n = 0; n < num_filters; ++n) {
-        for (unsigned d = 0; d < kernel_depth; ++d) {
-            for (unsigned h = 0; h < kernel_height; ++h) {
-                for (unsigned w = 0; w < kernel_width; ++w) {
+    for (u32_t n = 0; n < num_filters; ++n) {
+        for (u32_t d = 0; d < kernel_depth; ++d) {
+            for (u32_t h = 0; h < kernel_height; ++h) {
+                for (u32_t w = 0; w < kernel_width; ++w) {
                     if (!(ss >> data[n][d][h][w])) {
                         throw std::runtime_error("Error parsing input string: unexpected format");
                     }
@@ -484,18 +554,19 @@ std::vector<FilterSubNode> SVFNN::parse_filters(const std::string &s, unsigned i
         }
     }
     std::vector<FilterSubNode> filters;
-    for (unsigned n = 0; n < num_filters; ++n) {
-        std::vector<Eigen::MatrixXd> matrices;
-        for (unsigned d = 0; d < kernel_depth; ++d) {
-            Eigen::MatrixXd mat(kernel_height, kernel_width);
-            for (unsigned h = 0; h < kernel_height; ++h) {
-                for (unsigned w = 0; w < kernel_width; ++w) {
+    for (u32_t n = 0; n < num_filters; ++n) {
+        Matrices matrices;
+        for (u32_t d = 0; d < kernel_depth; ++d) {
+            Mat mat(kernel_height, kernel_width);
+            for (u32_t h = 0; h < kernel_height; ++h) {
+                for (u32_t w = 0; w < kernel_width; ++w) {
                     mat(h, w) = data[n][d][h][w];
                 }
             }
             matrices.push_back(mat);
         }
-        filters.emplace_back(matrices);
+        IntervalMatrices intervalmatrices = convertMatricesToIntervalMatrices(matrices);
+        filters.emplace_back(matrices, intervalmatrices);
     }
     return filters;
 }
@@ -528,7 +599,7 @@ std::vector<double> SVFNN::parse_Convbiasvector(std::string s) {
         }
     }
 
-    Eigen::VectorXd b(elems.size());
+    Vector b(elems.size());
     for (size_t i = 0; i < elems.size(); i++) {
         b(i) = elems[i];
     }
@@ -555,7 +626,7 @@ private:
 
 public:
     /// Allocate the NodeID
-    inline unsigned getNodeID(const std::string& str) {
+    inline u32_t getNodeID(const std::string& str) {
         size_t underscorePos = str.find('_'); /// Find the location of "_"
         if (underscorePos == std::string::npos) {
             throw std::invalid_argument("NodeID has been not allocated!");
@@ -571,13 +642,13 @@ public:
                 numberStr = numberStr.substr(1, 1);
             }
         }
-        unsigned number = std::stoi(numberStr);
+        u32_t number = std::stoi(numberStr);
         return number;
     }
 
     /// Thoese operator() is designed for collecting instance
     void operator()(const ConstantNodeInfo& node) {
-        unsigned id = getNodeID(node.name);
+        u32_t id = getNodeID(node.name);
         OrderedNodeName.push_back(node.name);
         ConstantNodeIns[node.name] = new ConstantNeuronNode(id);
         g->addConstantNeuronNode(ConstantNodeIns[node.name]);
@@ -586,21 +657,21 @@ public:
     void operator()(const BasicNodeInfo& node)  {
         auto id = getNodeID(node.name);
         OrderedNodeName.push_back(node.name);
-        BasicOPNodeIns[node.name] = new BasicOPNeuronNode(id, node.typestr, node.values);
+        BasicOPNodeIns[node.name] = new BasicOPNeuronNode(id, node.typestr, node.values, node.Intervalvalues);
         g->addBasicOPNeuronNode(BasicOPNodeIns[node.name]);
     }
 
-    void operator()(const ParsedGEMMParams& node)  {
+    void operator()(const FullyconnectedInfo& node)  {
         auto id = getNodeID(node.gemmName);
         OrderedNodeName.push_back(node.gemmName);
-        FullyConNodeIns[node.gemmName] = new FullyConNeuronNode(id, node.weight, node.bias);
+        FullyConNodeIns[node.gemmName] = new FullyConNeuronNode(id, node.weight, node.bias, node.Intervalweight, node.Intervalbias);
         g->addFullyConNeuronNode(FullyConNodeIns[node.gemmName]);
     }
 
     void operator()(const ConvNodeInfo& node) {
         auto id = getNodeID(node.name);
         OrderedNodeName.push_back(node.name);
-        ConvNodeIns[node.name] = new ConvNeuronNode(id, node.filter, node.conbias, node.pads.first, node.strides.first);
+        ConvNodeIns[node.name] = new ConvNeuronNode(id, node.filter, node.conbias, node.pads.first, node.strides.first, node.Intervalbias);
         g->addConvNeuronNode(ConvNodeIns[node.name]);
 
         for(size_t ip = 0; ip < node.filter.size(); ++ip) {
@@ -673,10 +744,10 @@ public:
 
     }
 
-    void Traversal(std::vector<Eigen::MatrixXd>& in_x) {
+    void Traversal(Matrices& in_x) {
 
         /// Print the dataset matrix
-        for(int j=0; j<in_x.size();j++){
+        for(u32_t j=0; j<in_x.size();j++){
             std::cout<<"Matrix: "<<j<<std::endl;
             std::cout<<in_x[j]<<std::endl;
         }
@@ -698,7 +769,7 @@ public:
         dfs->DFS(visited, path, &FirstNode, &LastNode, in_x);
         auto stringPath = dfs->getPaths();
         std::cout<<"GET PATH"<<stringPath.size()<<std::endl;
-        int i = 0;
+        u32_t i = 0;
         for (const std::string& paths : stringPath) {
             std::cout << i <<"*****"<< paths << std::endl;
             i++;
@@ -706,19 +777,28 @@ public:
 
         delete dfs; /// Delete allocated memory
     }
-    void IntervalTraversal(std::vector<Eigen::MatrixXd>& in_x) {
+    void IntervalTraversal(IntervalMatrices & in_x) {
 
         /// Print the dataset matrix
-        for(int j=0; j<in_x.size();j++){
-            std::cout<<"Matrix: "<<j<<std::endl;
-            std::cout<<in_x[j]<<std::endl;
+        std::cout.precision(20);
+        std::cout << std::fixed;
+        for (const auto& intervalMat : in_x) {
+            std::cout << "IntervalMatrix :\n";
+            std::cout << "Rows: " << intervalMat.rows() << ", Columns: " << intervalMat.cols() << "\n";
+            for (u32_t k = 0; k < intervalMat.rows(); ++k) {
+                for (u32_t j = 0; j < intervalMat.cols(); ++j) {
+                    std::cout<< "[ "<< intervalMat(k, j).lb().getRealNumeral()<<", "<< intervalMat(k, j).ub().getRealNumeral() <<" ]"<< "\t";
+                }
+                std::cout << std::endl;
+            }
+            std::cout<<"****************"<<std::endl;
         }
+
 
         /// Note: Currently, visited and path store pointers to  NeuronNodeVariant
         std::set<const NeuronNode *> visited;
         std::vector<const NeuronNode *> path;
         auto *dfs = new GraphTraversal();
-
 
         const auto& LastName = OrderedNodeName[OrderedNodeName.size() - 1];
         const auto& FirstName = OrderedNodeName[0];
@@ -731,7 +811,7 @@ public:
         dfs->IntervalDFS(visited, path, &FirstNode, &LastNode, in_x);
         auto stringPath = dfs->getPaths();
         std::cout<<"GET PATH"<<stringPath.size()<<std::endl;
-        int i = 0;
+        u32_t i = 0;
         for (const std::string& paths : stringPath) {
             std::cout << i <<"*****"<< paths << std::endl;
             i++;
@@ -749,7 +829,7 @@ int main(){
 ////    std::string address = "/Users/liukaijie/Desktop/operation-py/convSmallRELU__Point.onnx";
 //////    std::string address = "/Users/liukaijie/Desktop/operation-py/mnist_conv_maxpool.onnx";
     std::string address = "/Users/liukaijie/Desktop/operation-py/ffnnRELU__Point_6_500.onnx";
-//
+
     /// parse onnx into svf-onnx
     SVFNN svfnn(address);
     auto nodes = svfnn.get_nodes();
@@ -768,9 +848,10 @@ int main(){
     /// Load dataset: mnist or cifa-10
 //    LoadData dataset("cifar");
     LoadData dataset("mnist");
+    /// Input pixel matrix
     auto x = dataset.read_dataset();
     std::cout<<"Label: "<<x.first.front()<<std::endl;
-//
+
 //    double perti = 0.001;
 //    auto per_x = dataset.perturbateImages(x, perti);
 //
@@ -778,16 +859,17 @@ int main(){
 //    nngraph.Traversal(x.second.front());
 
     /// Run abstract interpretation on NNgraph Interval
-    nngraph.IntervalTraversal(x.second.front());
+    IntervalMatrices in_x = svfnn.convertMatricesToIntervalMatrices(x.second.front()) ;
+    nngraph.IntervalTraversal(in_x);
 
 //
 //    IntervalSolver aab(x.second.front());
 //    IntervalSolver aab;
 //    aab.initializeMatrix();
 //
-//    std::vector<Eigen::MatrixXd> a;
-//    Eigen::MatrixXd mat(2, 2);
-//    Eigen::MatrixXd mat1(2, 2);
+//    Matrices a;
+//    Mat mat(2, 2);
+//    Mat mat1(2, 2);
 //    mat << 1.26, 8.32,
 //        2.56, 2.89;
 //
@@ -796,20 +878,98 @@ int main(){
 //    a.push_back(mat);
 //    a.push_back(mat1);
 //
-//    // 转换
+//    // Convert
 //    auto aa = aab.convertMatricesToIntervalMatrices(a);
 //
 //    // 打印转换结果
 //    for (const auto& intervalMat : aab.interval_data_matrix) {
-//        for (int i = 0; i < intervalMat.rows(); ++i) {
-//            for (int j = 0; j < intervalMat.cols(); ++j) {
+//        for (u32_t i = 0; i < intervalMat.rows(); ++i) {
+//            for (u32_t j = 0; j < intervalMat.cols(); ++j) {
 //                std::cout << intervalMat(i, j) << "\t";
 //            }
 //            std::cout << std::endl;
 //        }
 //        std::cout<<"****************"<<std::endl;
 //    }
-//    return 0;
+
+    /// For testing ConvNode
+    /// 1.1 create filter.value: Matrices value;
+    /// 1.2 std::vector<filter> filter
+    /// 2. create input data: Matrices
+    /// 3. create bias
+
+
+
+//    // Init input data
+//    Matrices input(3);
+//    input[0] = (Mat(2, 2) << 1, 2, 3, 4).finished();
+//    input[1] = (Mat(2, 2) << 5, 6, 7, 8).finished();
+//    input[2] = (Mat(2, 2) << 9, 10, 11, 12).finished();
+//
+//    // Define Kernel 1
+//    Matrices kernel1Weights = {
+//        (Mat(2, 2) << 1, 0, 0, -1).finished(),
+//        (Mat(2, 2) << -1, 1, 1, 0).finished(),
+//        (Mat(2, 2) << 0, -1, 1, 1).finished()
+//    };
+//
+//    // Define Kernel 2
+//    Matrices kernel2Weights = {
+//        (Mat(2, 2) << 0, 1, -1, 0).finished(),
+//        (Mat(2, 2) << 1, 0, 0, -1).finished(),
+//        (Mat(2, 2) << -1, 1, 1, 0).finished()
+//    };
+//
+//    // Define Kernel 3
+//    Matrices kernel3Weights = {
+//        (Mat(2, 2) << -1, 0, 0, 1).finished(),
+//        (Mat(2, 2) << 0, -1, 1, 1).finished(),
+//        (Mat(2, 2) << 1, 0, -1, -1).finished()
+//    };
+//
+//    // Define Kernel 4
+//    Matrices kernel4Weights = {
+//        (Mat(2, 2) << -1, 0, 0, 1).finished(),
+//        (Mat(2, 2) << 0, -1, 1, 1).finished(),
+//        (Mat(2, 2) << 1, 0, -1, -1).finished()
+//    };
+//
+//
+//    // Filter
+//    FilterSubNode kernel1(kernel1Weights);
+//    FilterSubNode kernel2(kernel2Weights);
+//    FilterSubNode kernel3(kernel3Weights);
+//    FilterSubNode kernel4(kernel4Weights);
+//
+//    std::vector<FilterSubNode> filters = {kernel1, kernel2, kernel3, kernel4};
+//
+//    // Define filter
+//    //    std::vector<Filter> filters;
+//    std::vector<double> biases = {1, 1, 1, 1}; // 偏置项
+//
+//
+//    // pad = 1; stride = 1;
+//    u32_t padding = 1;
+//    u32_t stride = 1;
+//
+//    // ConvNode info
+//    NodeID id = 3;
+//
+//    ConvNeuronNode convLayer(id, filters, biases, padding, stride);
+//
+//    // using evaluate() to process input
+////    Matrices output = convLayer.evaluate(input);
+//    SolverEvaluate solver(input);
+//    solver.setIRMatrix(input);
+//    Matrices newIRRes = solver.ConvNeuronNodeevaluate(&convLayer);
+//
+//    // Output
+//    for (size_t i = 0; i < newIRRes.size(); ++i) {
+//        std::cout << "Output feature map " << i + 1 << ":\n" << newIRRes[i] << "\n\n";
+//    }
+
+
+    return 0;
 }
 
 

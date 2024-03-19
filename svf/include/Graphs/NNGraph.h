@@ -142,8 +142,8 @@ public:
     void printPath(std::vector<const NeuronNode *> &path);
     NeuronNode* getNeuronNodePtrFromVariant(const NeuronNodeVariant& variant);
     NeuronNodeVariant convertToVariant(NeuronNode* node);
-    void DFS(std::set<const NeuronNode *> &visited, std::vector<const NeuronNode *> &path, const NeuronNodeVariant *src, const NeuronNodeVariant *dst, std::vector<Eigen::MatrixXd> in_x);
-    void IntervalDFS(std::set<const NeuronNode *> &visited, std::vector<const NeuronNode *> &path, const NeuronNodeVariant *src, const NeuronNodeVariant *dst, std::vector<Eigen::MatrixXd> in_x);
+    void DFS(std::set<const NeuronNode *> &visited, std::vector<const NeuronNode *> &path, const NeuronNodeVariant *src, const NeuronNodeVariant *dst, Matrices in_x);
+    void IntervalDFS(std::set<const NeuronNode *> &visited, std::vector<const NeuronNode *> &path, const NeuronNodeVariant *src, const NeuronNodeVariant *dst, IntervalMatrices in_x);
     /// Retrieve all paths (a set of strings) during graph traversal
     std::set<std::string>& getPaths(){
         return paths;

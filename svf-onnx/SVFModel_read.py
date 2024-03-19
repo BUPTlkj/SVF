@@ -7,31 +7,29 @@ import warnings
 # from neo4j import GraphDatabase
 from enum import Enum
 
-# 目前支持ONNX基本分析
-# 1. 支持分析结果转化为ONNXJSON格式
-# 2. 支持分析结果转化为关系型到Neo4j图数据库
-# 3. 支持与C++代码交互
+# Currently supporting ONNX basic analysis
+# 1 Support converting analysis results to ONNXJSON format
+# 2 Support converting analysis results into relational data into Neo4j graph database
+# 3 Support interaction with C++code
+# Step 1.1, this section reads the structure of the ONNX model
+# Read the ONNX network structure and determine if it is a convolutional neural network
 
-# Step 1.1, 此部分是读取ONNX模型的结构
-
-# 读取onnx网络结构 并判断是否是卷积神经网络
 def read_onnx_net(net_file):
-	# 加载模型
+	# Load model
 	onnx_model = onnx.load(net_file)
-	# 检查模型加载是否完全准确
+	# Check model loading
 	onnx.checker.check_model(onnx_model)
 
-	# 用于判断是否是卷积神经网络的字符
+	# Used to determine whether they are convolutional neural networks
 	is_conv = False
-	# 检查神经网络结构的每一个节点
+	# Check each node of the neural network structure
 	for node in onnx_model.graph.node:
-		# 是否是Conv 卷积神经网络
-		# print("type", node.op_type)
+		# Whether is Conv
 		if node.op_type == 'Conv':
 			is_conv = True
 			break
 
-	# 返回正确的神经网络， 并返回是否是卷积神经网络
+	# Returns the correct neural network and whether it is a convolutional neural network
 	return onnx_model, is_conv
 
 def gain_node(inferred_onnx_model):
@@ -41,37 +39,37 @@ def gain_node(inferred_onnx_model):
 
 def onnxshape_to_intlist(onnxshape):
 
-	# lambda是一种一次性临时函数
-	# 将onnx.shape.dim的值迭代的赋值给j，如果是空就是1，否则就是onnxshapee.dim
+	# Lambda is a one-time temporary function
+	# Iteratively assign the value of onnx.shape.dim to j, if it is empty, it is 1, otherwise it is onnxshape.dim
 	# map(funcution, iterate)
-	# result存放的是维度
+	# result stores dimensions
 	result = list(map(lambda j: 1 if j.dim_value is None else int(j.dim_value), onnxshape.dim))
 
 	# No shape means a single value
 	if not result:
 		return [1]
 
-	# NCHW 和 NHWC 是tensor的存储格式
+	# NCHW & NHWC
 	# convert NCHW to NHWC
-	# 其中 N 表示batch size；C表示 feature maps 的数量，又称之为通道数；H 表示图片的高度，W表示图片的宽度
+	# N: batch size; C, the number of feature maps, Channels. H:height，W: weight.
 	if len(result) == 4:
 		return [result[0], result[2], result[3], result[1]]
 
-	# 返回NHWC维度
+	# return NHWC dims
 	return result
 
-# 维度转换
+# Dims convert
 def nchw_to_nhwc_shape(shape):
 
-	# assert（断言）用于判断一个表达式，在表达式条件为 false 的时候触发异常
+	# Assert is used to determine an expression and trigger an exception when the expression condition is false
 	assert len(shape) == 4, "Unexpected shape size"
-	# 将NCHW 转化为 NHWC
+	# convert NCHW into NHWC
 	return [shape[0], shape[2], shape[3], shape[1]]
 
-# 索引转换
+# index convert
 def nchw_to_nhwc_index(index: int) -> int:
 
-	# 判断index是否out of bound
+	# Determine whether index is out of bound
 	# NCHW -> NHWC, 0==0 1->3 2->1 3->2
 	assert 0 <= index <= 3, f"index out of range: {index}"
 	if index == 0:  # batch (N)
@@ -81,40 +79,39 @@ def nchw_to_nhwc_index(index: int) -> int:
 	else:
 		return index - 1
 
-# nchw的矩阵转化为nhwc的矩阵
+# Convert nchw into nhwc matrix
 def nchw_to_nhwc(array):
 
-	# 将NCHW transpose为 NHWC
+	# NCHW transpose NHWC
 	if array.ndim == 4:
 		return array.transpose(0, 2, 3, 1)
 
 	return array
 
-
-# CHW与HWC的转化
-# 输入两个矩阵的size
+# Conversion of CHW and HWC
+# Enter the dims of two matrices
 def reshape_nhwc(shape_in, shape_out):
 	#print(shape_in, shape_out)
-	# 计算输入的n-batch
+	# Calculate the input  n-batch
 	ndim_in = len(shape_in)
-	# 计算输出的n-batch
+	# Calculate the output n-batch
 	ndim_out = len(shape_out)
-	# np.prod函数计算输入元素的乘积=CHW
+	# np.prod fun is used to calculate the product of input elements =CHW
 	total_in = np.prod(shape_in[1:ndim_in])
-	# np.prod函数计算输出元素的乘积=HWC
+	# np.prodfun is used to calculate the product of output elements=HWC
 	total_out = np.prod(shape_out[1:ndim_out])
-	# 保证输入输出的总数量一致的
-	# 输出他们并不是数量一致的神经元计算而来
+	# Ensure consistent total quantity of inputs and outputs
+	# The output is not calculated from the same number of neurons
 	assert total_in == total_out, "Reshape doesn't have same number of neurons before and after"
-	# np.asarray类似于np.array 将其转化为数组
-	# range()函数0 -> total_in-1
-	# 将其转化为输入形式的数组 CHW
+	# np.asarray is similar to np.array. Convert it to an array
+	# range() 0 -> total_in-1
+	# Convert it into an array in input form CHW
 	array = np.asarray(range(total_in)).reshape(shape_in[1:ndim_in])
-	# ndim()函数返回
+	# ndim() return
 	if array.ndim == 3:
 		# WCH
 		array = array.transpose((2, 0, 1))
-	# 转为输出的维度形式的数组
+	# Convert an array in the form of output dimensions
 	# HWC
 	array = array.reshape(shape_out[1:ndim_out])
 	if array.ndim == 3:
@@ -123,65 +120,62 @@ def reshape_nhwc(shape_in, shape_out):
 	else:
 		return array
 
-# 该function的主要功能是提取神经元的分析要用到的内部信息
+# This function is to extract internal information needed for analyzing neurons
 def prepare_model(model):
 
-	shape_map = {} # 所有提取的shape{名称：shape}
-	constants_map = {} # 常数
-	output_node_map = {} # {输出节点名：节点}
-	input_node_map = {} # {输入节点名：节点}
+	shape_map = {} # all the shape{name: shape}
+	constants_map = {} # constant
+	output_node_map = {} # {input node name: node}
+	input_node_map = {} # {input node name: node}
 
-	# constants_map 获得每一个node的名字，以及他的常数值
-	# shape_map 获得每一个node的名字，以及他的形状
-	# initializer 存放模型的所有权重
+	# constants_map gain each node name and constant
+	# shape_map gain each node name and shape
+	# initializer store the model's weight
 	for initial in model.graph.initializer:
-		# .copy函数保证了原数据的变化与const变化一致
+		# .copyThe function ensures that the changes in the original data are consistent with the const changes
 		const = nchw_to_nhwc(numpy_helper.to_array(initial)).copy()
-		# 获得神经网络的权重
+		# gain weight
 		constants_map[initial.name] = const
-		# 获得神经网络的权重的shape
+		# gain the weight's shape
 		shape_map[initial.name] = const.shape
 
-	# 所有输入节点的name
+	# all input nodes' name
 	placeholdernames = []
-	# 获得所有节点的输入input
-	#print("graph ", model.graph.node)
+	# all nodes' input
 	for node_input in model.graph.input:
-		# 获得每一个input中的name到placeholdernames列表中
+		# Obtain the name from each input and add it to the placeholder's names list
 		placeholdernames.append(node_input.name)
 		if node_input.name not in shape_map:
-			# 调用onnxshape_to_intlist函数提取node.input的输入shape
+			# Call onnxshape_to_intlist fun to extract node.input's shape
 			shape_map[node_input.name] = onnxshape_to_intlist(node_input.type.tensor_type.shape)
-			# 将输入节点加入input_node_map矩阵
+			# Add input nodes to the input_node_map matrix
 			input_node_map[node_input.name] = node_input
 
-	# 枚举nn结构中node节点的内容
-	# node存放所有的计算节点
+	# Enumerating the content of node nodes in the nn structure
+	# Node stores all computing nodes
 	for node in model.graph.node:
-		#print(node.op_type)
-		# output_node_map字典 保存节点的信息
+		# output_node_map dict, store node info
 		output_node_map[node.output[0]] = node
-		# 检索当前节点中的input部分
+		# Retrieve the input section in the current node
 		for node_input in node.input:
-			# 将node_input节点信息保存到字典中
 			input_node_map[node_input] = node
 
-		# 以下是用来当前节点的类型attribute
+		# The following is the type attribute used for the current node
 
-		# 如果是flatten，拉成一维向量
+		# flatten，pull it into a one-dimensional vector
 		if node.op_type == "Flatten":
-			#shape_map[node.output[0]] = shape_map[node.input[0]]
-			# 其输出的矩阵的shape_map 如下，以输出节点为检索名，输出的一维矩阵的维度为[1, HWC的乘积]
+			# The shape_map of the output matrix is as follows, with the output node as the search name,
+			# and the dimension of the output one-dimensional matrix is [1, the product of HWC]
 			shape_map[node.output[0]] = [1,] + [np.prod(shape_map[node.input[0]][1:]),]
-		# 如果是常数
+		# If it is constant
 		elif node.op_type == "Constant":
-			# 获取节点的属性
+			# Get node properties
 			const = node.attribute
 			const = nchw_to_nhwc(numpy_helper.to_array(const[0].t)).copy()
 			constants_map[node.output[0]] = const
 			shape_map[node.output[0]] = const.shape
-		# 如果是矩阵乘法
-		# transA 和 transB 分别代表不同的矩阵
+		# If it is matrix multiplication
+		# transA & transB represents different matrix
 		elif node.op_type in ["MatMul", "Gemm"]:
 			transA = 0
 			transB = 0
@@ -196,9 +190,9 @@ def prepare_model(model):
 			N = input_shape_B[1 - transB]
 			shape_map[node.output[0]] = [M, N]
 
-		# 如果是加减乘除
+		# If add, sub, mul, div
 		elif node.op_type in ["Add", "Sub", "Mul", "Div"]:
-			# 上述操作不会改变大小
+			# The above operation will not change dims
 			shape_map[node.output[0]] = shape_map[node.input[0]]
 			if node.input[0] in constants_map and node.input[1] in constants_map:
 				if node.op_type == "Add":
@@ -296,7 +290,6 @@ def prepare_model(model):
 				shape_map[node.output[0]] = [len(shape_map[node.input[0]])]
 
 		elif node.op_type == "Reshape":
-			#print("RESHAPE ", node.input, node.output)
 			if node.input[1] in constants_map:
 				total = 1
 				replace_index = -1
@@ -455,13 +448,11 @@ def input_node_map_2_graph(input_node_map):
 		current_node_output_name = []
 		current_node_output_dim = ""
 		current_node_op = ""
-		# 当前节点名
+		# Current Node_name
 		current_node_name = current
 		newstr = str(input_node_map[current_node_name]).split('\n')
-		#print("1111", newstr)
 		for ii in newstr:
 			ii_ = ii.split(':')
-			#print("2222", ii_)
 			if 'input' in ii_:
 				current_node_input_name.append(ii_[1])
 			if 'output' in ii_:
@@ -474,10 +465,8 @@ def input_node_map_2_graph(input_node_map):
 		node_info.append(current_node_op)
 		node_info.append(current_node_input_name)
 		node_info.append(current_node_output_name)
-		#print(node_info)
 		input_graph[current_node_name] = node_info
 
-	# print(graph)
 	return input_graph
 
 def to_json(path):
@@ -486,15 +475,14 @@ def to_json(path):
 	shape_map, constants_map, output_node_map, input_node_map, placeholdernames = prepare_model(model)
 	gain = output_node_map_2_graph(shape_map, constants_map, output_node_map)
 	aa = path.replace('.onnx','.json')
-	print("pppppppppp", aa)
 	json_str = json.dumps(gain)
-	# 将JSON字符串写入文件中
+	# Load JSON into files
 	with open("data22l.json", "w", encoding="utf-8") as f:
 		f.write(json_str)
 
 
 def to_neo4j(onnx_path, neo4j_uri, neo4j_user, neo4j_password):
-	# 创建连接
+	# Create connection
 	driver = GraphDatabase.driver(neo4j_uri, auth=(neo4j_user, neo4j_password))
 	model_path = onnx_path
 	pre_string = "_" + onnx_path.replace(".onnx", "")
@@ -505,9 +493,8 @@ def to_neo4j(onnx_path, neo4j_uri, neo4j_user, neo4j_password):
 	for na in gain.keys():
 		name_list.append(na)
 
-	#print(name_list)
 	def create_directed_graph(tx, name_list):
-		# 创建节点和关系
+		# Create nodes and relationships
 		for i in range(len(name_list) - 1):
 			tx.run(
 				"MERGE (a:Node {name: $source}) "
@@ -517,7 +504,7 @@ def to_neo4j(onnx_path, neo4j_uri, neo4j_user, neo4j_password):
 				target=name_list[i + 1]
 			)
 
-	# 使用Neo4j事务创建节点关系
+	# Creating node relationships using Neo4j transactions
 	with driver.session() as session:
 		session.execute_write(create_directed_graph, name_list)
 
@@ -528,7 +515,7 @@ def to_neo4j(onnx_path, neo4j_uri, neo4j_user, neo4j_password):
 			   node_type=node_type)
 
 	def add_property(tx, node_name, property1_value, property2_value):
-		# 为节点添加属性
+		# Add attributes to nodes
 		tx.run("MATCH (node:Node {name: $node_name}) "
 			   "SET node.dims = $property1_value, node.dim_val = $property2_value",
 			   node_name=node_name,
@@ -602,11 +589,11 @@ def conv_filter(model_path):
 	info = []
 	model, is_conv = read_onnx_net(model_path)
 	shape_map, constants_map, output_node_map, input_node_map, placeholdernames = prepare_model(model)
-	# 拓扑顺序排列的节点的输入输出节点的依存关系的node列表
+	# Node list of dependency relationships between input and output nodes arranged in topological order
 	nodes = model.graph.node
 	for node_idx, node in enumerate(nodes):
 		if node.op_type == "Conv":
-			# 获得filter
+			# Gain filter
 			filters = constants_map[node.input[1]].transpose(1, 2, 3, 0)
 			if node_idx < 10:
 				conv_name = "0" + str(node_idx) + "_" + node.op_type
@@ -620,7 +607,7 @@ def get_strides(model_path):
 	res = {}
 	model, is_conv = read_onnx_net(model_path)
 	shape_map, constants_map, output_node_map, input_node_map, placeholdernames = prepare_model(model)
-	# 拓扑顺序排列的节点的输入输出节点的依存关系的node列表
+	# Node list of dependency relationships between input and output nodes arranged in topological order
 	nodes = model.graph.node
 	for node_idx, node in enumerate(nodes):
 		info = []
