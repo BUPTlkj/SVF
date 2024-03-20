@@ -1,10 +1,10 @@
 #ifndef SVF_NNGRAPH_H
 #define SVF_NNGRAPH_H
 
+#include "AE/Nnexe/NNgraphIntervalSolver.h"
 #include "NNEdge.h"
 #include "NNNode.h"
 #include <memory>
-#include "../svf-onnx/IntervalSolver.h"
 
 /// using SVF namespace graph strcture
 namespace SVF {
@@ -133,34 +133,6 @@ public:
     }
 
 };
-
-class GraphTraversal
-{
-public:
-    /// Constructor
-    GraphTraversal(){};
-    /// Destructor
-    ~GraphTraversal(){};
-
-
-    /// By Node
-    bool checkNodeInVariant(const NeuronNode* current, const NeuronNodeVariant& dst);
-    void printPath(std::vector<const NeuronNode *> &path);
-    NeuronNode* getNeuronNodePtrFromVariant(const NeuronNodeVariant& variant);
-    NeuronNodeVariant convertToVariant(NeuronNode* node);
-    void DFS(std::set<const NeuronNode *> &visited, std::vector<const NeuronNode *> &path, const NeuronNodeVariant *src, const NeuronNodeVariant *dst, Matrices in_x);
-    void IntervalDFS(std::set<const NeuronNode *> &visited, std::vector<const NeuronNode *> &path, const NeuronNodeVariant *src, const NeuronNodeVariant *dst, IntervalMatrices in_x);
-    /// Retrieve all paths (a set of strings) during graph traversal
-    std::set<std::string>& getPaths(){
-        return paths;
-    }
-
-
-private:
-    std::set<std::string> paths;
-
-};
-
 
 } /// End namespace SVF
 

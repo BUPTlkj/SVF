@@ -1,7 +1,7 @@
 #ifndef SVF_NNNODE_H
 #define SVF_NNNODE_H
 
-
+#include <cstdlib>
 #include "GenericGraph.h"
 #include "NNEdge.h"
 #include <Eigen/Dense>
@@ -115,7 +115,8 @@ public:
         for (u32_t i = 0; i < x.size(); i++) {
             for (u32_t j = 0; j < x.size(); j++) {
                 if (x[i].rows() != x[j].rows() || x[i].cols() != x[j].cols()) {
-                    throw std::runtime_error("Bad construction of Filter");
+                    std::cout<<"Bad construction of Filter"<<std::endl;
+                    exit(0);
                 }
             }
         }

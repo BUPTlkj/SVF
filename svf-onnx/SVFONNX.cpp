@@ -1,10 +1,17 @@
 #include "SVFONNX.h"
-#include "IntervalSolver.h"
-#include "Loaddata.h"
-#include "Solver.h"
+#include "AE/Nnexe/NNgraphIntervalSolver.h"
 #include <algorithm> /// For std::remove
 /// Parse function to extract integers from a given string and return their
 /// vectors
+
+#if defined(_WIN32)
+#include <windows.h>
+#elif defined(__linux__)
+#include <unistd.h>
+#include <limits.h>
+#elif defined(__APPLE__)
+#include <mach-o/dyld.h>
+#endif
 
 using namespace SVF;
 
@@ -298,14 +305,36 @@ std::map<std::string, std::string> SVFNN::callPythonFunction(const std::string& 
 
     PyObject *pModule, *pFunc, *pArgs, *pValue;
     std::map<std::string, std::string> cppMap;
+    std::string pathstring;
 
-    PyRun_SimpleString("import os, sys");
-//    PyRun_SimpleString("current_file_path = os.path.dirname(os.path.abspath(__file__))");
-//    PyRun_SimpleString("PROJECT_ROOT = os.path.dirname(os.path.abspath(__file__))");
-//    PyRun_SimpleString("current_file_path = os.path.dirname(PROJECT_ROOT)");
-//    PyRun_SimpleString("sys.path.append(current_file_path)");
-    // todo
-    PyRun_SimpleString("sys.path.append('/Users/liukaijie/CLionProjects/ReadPython')");
+    #if defined(_WIN32)
+        char path[MAX_PATH] = { 0 };
+        GetModuleFileNameA(NULL, path, MAX_PATH);
+        pathstring = std::string(path);
+    #elif defined(__linux__)
+        char path[PATH_MAX];
+        ssize_t count = readlink("/proc/self/exe", path, PATH_MAX);
+        pathstring = std::string(path);
+    #elif defined(__APPLE__)
+        char path[1024];
+        uint32_t size = sizeof(path);
+        if (_NSGetExecutablePath(path, &size) == 0)
+            pathstring = std::string(path);
+        else
+            pathstring = std::string();
+    #else
+        #error "Unsupported platform!"
+    pathstring = std::string();
+    #endif
+
+    PyRun_SimpleString("import sys");
+
+    std::filesystem::path exePath(pathstring);
+    std::filesystem::path SVFPath = exePath.parent_path().parent_path().parent_path();
+    std::string sub_path = "/svf-onnx";
+    std::string pyscriptpath = std::string(SVFPath) + sub_path;
+    std::string command = "sys.path.append('" + pyscriptpath + "')";
+    PyRun_SimpleString(command.c_str());
 
     /// Import Python script
     pModule = PyImport_ImportModule("SVFModel_read");
@@ -611,381 +640,10 @@ std::vector<double> SVFNN::parse_Convbiasvector(std::string s) {
     return elems;
 }
 
-/// NNGraph Bulid
-class NNGraphBuilder {
-private:
-    /// init nodes
-    std::unordered_map<std::string, ConstantNeuronNode*> ConstantNodeIns;
-    std::unordered_map<std::string, ConvNeuronNode*> ConvNodeIns;
-    std::unordered_map<std::string, ReLuNeuronNode*> ReLuNodeIns;
-    std::unordered_map<std::string, FlattenNeuronNode*> FlattenNodeIns;
-    std::unordered_map<std::string, MaxPoolNeuronNode*> MaxPoolNodeIns;
-    std::unordered_map<std::string, FullyConNeuronNode*> FullyConNodeIns;
-    std::unordered_map<std::string, BasicOPNeuronNode*> BasicOPNodeIns;
-    /// Node's class name for visitors
-    std::vector<std::string> OrderedNodeName;
-    std::vector<std::unique_ptr<NeuronNode>> Nodeins;
-    /// init edges
-    std::vector<std::unique_ptr<Direct2NeuronEdge>> edges;
-    /// init Graph
-    NeuronNet *g = new NeuronNet();
-
-public:
-    /// Allocate the NodeID
-    inline u32_t getNodeID(const std::string& str) {
-        size_t underscorePos = str.find('_'); /// Find the location of "_"
-        if (underscorePos == std::string::npos) {
-            throw std::invalid_argument("NodeID has been not allocated!");
-        }
-        /// Extract substrings before "_"
-        std::string numberStr = str.substr(0, underscorePos);
-
-        size_t endpos = numberStr.find_last_not_of(" ");
-        if (std::string::npos != endpos) {
-            /// Delete all characters from endpos+1 to the end of the string
-            numberStr = numberStr.substr(1, endpos + 1);
-            if (numberStr.length() == 2 && numberStr[0] == '0'){
-                numberStr = numberStr.substr(1, 1);
-            }
-        }
-        u32_t number = std::stoi(numberStr);
-        return number;
-    }
-
-    /// Thoese operator() is designed for collecting instance
-    void operator()(const ConstantNodeInfo& node) {
-        u32_t id = getNodeID(node.name);
-        OrderedNodeName.push_back(node.name);
-        ConstantNodeIns[node.name] = new ConstantNeuronNode(id);
-        g->addConstantNeuronNode(ConstantNodeIns[node.name]);
-    }
-
-    void operator()(const BasicNodeInfo& node)  {
-        auto id = getNodeID(node.name);
-        OrderedNodeName.push_back(node.name);
-        BasicOPNodeIns[node.name] = new BasicOPNeuronNode(id, node.typestr, node.values, node.Intervalvalues);
-        g->addBasicOPNeuronNode(BasicOPNodeIns[node.name]);
-    }
-
-    void operator()(const FullyconnectedInfo& node)  {
-        auto id = getNodeID(node.gemmName);
-        OrderedNodeName.push_back(node.gemmName);
-        FullyConNodeIns[node.gemmName] = new FullyConNeuronNode(id, node.weight, node.bias, node.Intervalweight, node.Intervalbias);
-        g->addFullyConNeuronNode(FullyConNodeIns[node.gemmName]);
-    }
-
-    void operator()(const ConvNodeInfo& node) {
-        auto id = getNodeID(node.name);
-        OrderedNodeName.push_back(node.name);
-        ConvNodeIns[node.name] = new ConvNeuronNode(id, node.filter, node.conbias, node.pads.first, node.strides.first, node.Intervalbias);
-        g->addConvNeuronNode(ConvNodeIns[node.name]);
-
-        for(size_t ip = 0; ip < node.filter.size(); ++ip) {
-            /// Using filter[i]
-            const FilterSubNode &subNode = node.filter[ip];
-            for(size_t ipp = 0; ipp < subNode.value.size(); ipp++){
-                std::cout<<"Filter: "<<ip<<" - Matrix: "<<ipp<<std::endl;
-                std::cout<<subNode.value[ipp]<<std::endl;
-            }
-        }
-    }
-
-    void operator()(const ReluNodeInfo& node) {
-        auto id = getNodeID(node.name);
-        OrderedNodeName.push_back(node.name);
-        ReLuNodeIns[node.name] = new ReLuNeuronNode(id);
-        g->addReLuNeuronNode(ReLuNodeIns[node.name]);
-    }
-
-    void operator()(const FlattenNodeInfo& node) {
-        auto id = getNodeID(node.name);
-        OrderedNodeName.push_back(node.name);
-        FlattenNodeIns[node.name] = new FlattenNeuronNode(id);
-        g->addFlattenNeuronNode(FlattenNodeIns[node.name]);
-    }
-
-    void operator()(const MaxPoolNodeInfo& node) {
-        auto id = getNodeID(node.name);
-        OrderedNodeName.push_back(node.name);
-        MaxPoolNodeIns[node.name] = new MaxPoolNeuronNode(id, node.windows.first, node.windows.second, node.strides.first, node.strides.second, node.pads.first, node.pads.second);
-        g->addMaxPoolNeuronNode(MaxPoolNodeIns[node.name]);
-    }
-
-    NeuronNodeVariant getNodeInstanceByName(const std::string& name) const {
-        if (auto it = ConstantNodeIns.find(name); it != ConstantNodeIns.end()) return it->second;
-        if (auto it = ConvNodeIns.find(name); it != ConvNodeIns.end()) return it->second;
-        if (auto it = ReLuNodeIns.find(name); it != ReLuNodeIns.end()) return it->second;
-        if (auto it = MaxPoolNodeIns.find(name); it != MaxPoolNodeIns.end()) return it->second;
-        if (auto it = FullyConNodeIns.find(name); it != FullyConNodeIns.end()) return it->second;
-        if (auto it = BasicOPNodeIns.find(name); it != BasicOPNodeIns.end()) return it->second;
-        if (auto it = FlattenNodeIns.find(name); it != FlattenNodeIns.end()) return it->second;
-
-        return std::monostate{};
-    }
-
-    NeuronNode* getNeuronNodeInstanceByName(const std::string& name) const {
-        if (auto it = ConstantNodeIns.find(name); it != ConstantNodeIns.end()) return it->second;
-        if (auto it = ConvNodeIns.find(name); it != ConvNodeIns.end()) return it->second;
-        if (auto it = ReLuNodeIns.find(name); it != ReLuNodeIns.end()) return it->second;
-        if (auto it = MaxPoolNodeIns.find(name); it != MaxPoolNodeIns.end()) return it->second;
-        if (auto it = FullyConNodeIns.find(name); it != FullyConNodeIns.end()) return it->second;
-        if (auto it = BasicOPNodeIns.find(name); it != BasicOPNodeIns.end()) return it->second;
-        if (auto it = FlattenNodeIns.find(name); it != FlattenNodeIns.end()) return it->second;
-        return nullptr;
-    }
-
-    bool isValidNode(const NeuronNodeVariant& node) {
-        return !std::holds_alternative<std::monostate>(node);
-    }
-
-    void AddEdges() {
-
-        for (size_t i = 0; i < OrderedNodeName.size() - 1; ++i) {
-            const auto& currentName = OrderedNodeName[i];
-            const auto& nextName = OrderedNodeName[i + 1];
-
-            NeuronNode* currentNode = getNeuronNodeInstanceByName(currentName);
-            NeuronNode* nextNode = getNeuronNodeInstanceByName(nextName);
-
-            if (currentNode && nextNode) {
-                /// Ensure edge is created as a unique_ptr<Direct2NeuronEdge>
-                auto edge = std::make_unique<Direct2NeuronEdge>(currentNode, nextNode);
-                edges.push_back(std::move(edge)); // This should now work
-            }
-        }
-
-        for (const auto& edge : edges){
-            g->addDirected2NodeEdge(edge.get());
-        }
-
-    }
-
-    void Traversal(Matrices& in_x) {
-
-        /// Print the dataset matrix
-        for(u32_t j=0; j<in_x.size();j++){
-            std::cout<<"Matrix: "<<j<<std::endl;
-            std::cout<<in_x[j]<<std::endl;
-        }
-
-        /// Note: Currently, visited and path store pointers to  NeuronNodeVariant
-        std::set<const NeuronNode *> visited;
-        std::vector<const NeuronNode *> path;
-        auto *dfs = new GraphTraversal();
-
-
-        const auto& LastName = OrderedNodeName[OrderedNodeName.size() - 1];
-        const auto& FirstName = OrderedNodeName[0];
-
-        /// getNodeInstanceByName() return type: NeuronNodeVariant
-        auto FirstNode = getNodeInstanceByName(FirstName); /// Return NeuronNodeVariant
-        auto LastNode = getNodeInstanceByName(LastName); /// Return NeuronNodeVariant
-
-        /// Due to DFS now accepting parameters:  NeuronNodeVariant type, directly passing the addresses of FirstNode and LastNode
-        dfs->DFS(visited, path, &FirstNode, &LastNode, in_x);
-        auto stringPath = dfs->getPaths();
-        std::cout<<"GET PATH"<<stringPath.size()<<std::endl;
-        u32_t i = 0;
-        for (const std::string& paths : stringPath) {
-            std::cout << i <<"*****"<< paths << std::endl;
-            i++;
-        }
-
-        delete dfs; /// Delete allocated memory
-    }
-    void IntervalTraversal(IntervalMatrices & in_x) {
-
-        /// Print the dataset matrix
-        std::cout.precision(20);
-        std::cout << std::fixed;
-        for (const auto& intervalMat : in_x) {
-            std::cout << "IntervalMatrix :\n";
-            std::cout << "Rows: " << intervalMat.rows() << ", Columns: " << intervalMat.cols() << "\n";
-            for (u32_t k = 0; k < intervalMat.rows(); ++k) {
-                for (u32_t j = 0; j < intervalMat.cols(); ++j) {
-                    std::cout<< "[ "<< intervalMat(k, j).lb().getRealNumeral()<<", "<< intervalMat(k, j).ub().getRealNumeral() <<" ]"<< "\t";
-                }
-                std::cout << std::endl;
-            }
-            std::cout<<"****************"<<std::endl;
-        }
-
-
-        /// Note: Currently, visited and path store pointers to  NeuronNodeVariant
-        std::set<const NeuronNode *> visited;
-        std::vector<const NeuronNode *> path;
-        auto *dfs = new GraphTraversal();
-
-        const auto& LastName = OrderedNodeName[OrderedNodeName.size() - 1];
-        const auto& FirstName = OrderedNodeName[0];
-
-        /// getNodeInstanceByName() return type: NeuronNodeVariant
-        auto FirstNode = getNodeInstanceByName(FirstName); /// Return NeuronNodeVariant
-        auto LastNode = getNodeInstanceByName(LastName); /// Return NeuronNodeVariant
-
-        /// Due to DFS now accepting parameters:  NeuronNodeVariant type, directly passing the addresses of FirstNode and LastNode
-        dfs->IntervalDFS(visited, path, &FirstNode, &LastNode, in_x);
-        auto stringPath = dfs->getPaths();
-        std::cout<<"GET PATH"<<stringPath.size()<<std::endl;
-        u32_t i = 0;
-        for (const std::string& paths : stringPath) {
-            std::cout << i <<"*****"<< paths << std::endl;
-            i++;
-        }
-
-        delete dfs; /// Delete allocated memory
-    }
-};
-
-/////////////TEST
-
 
 int main(){
 
-////    std::string address = "/Users/liukaijie/Desktop/operation-py/convSmallRELU__Point.onnx";
-//////    std::string address = "/Users/liukaijie/Desktop/operation-py/mnist_conv_maxpool.onnx";
-    std::string address = "/Users/liukaijie/Desktop/operation-py/ffnnRELU__Point_6_500.onnx";
 
-    /// parse onnx into svf-onnx
-    SVFNN svfnn(address);
-    auto nodes = svfnn.get_nodes();
-
-    /// Init nn-graph builder
-    NNGraphBuilder nngraph;
-
-    /// Init & Add node
-    for (const auto& node : nodes) {
-        std::visit(nngraph, node);
-    }
-
-    /// Init & Add Edge
-    nngraph.AddEdges();
-
-    /// Load dataset: mnist or cifa-10
-//    LoadData dataset("cifar");
-    LoadData dataset("mnist");
-    /// Input pixel matrix
-    auto x = dataset.read_dataset();
-    std::cout<<"Label: "<<x.first.front()<<std::endl;
-
-//    double perti = 0.001;
-//    auto per_x = dataset.perturbateImages(x, perti);
-//
-    /// Run abstract interpretation on NNgraph
-//    nngraph.Traversal(x.second.front());
-
-    /// Run abstract interpretation on NNgraph Interval
-    IntervalMatrices in_x = svfnn.convertMatricesToIntervalMatrices(x.second.front()) ;
-    nngraph.IntervalTraversal(in_x);
-
-//
-//    IntervalSolver aab(x.second.front());
-//    IntervalSolver aab;
-//    aab.initializeMatrix();
-//
-//    Matrices a;
-//    Mat mat(2, 2);
-//    Mat mat1(2, 2);
-//    mat << 1.26, 8.32,
-//        2.56, 2.89;
-//
-//    mat1 << 1.289, 2.564,
-//            3.2, 4.98;
-//    a.push_back(mat);
-//    a.push_back(mat1);
-//
-//    // Convert
-//    auto aa = aab.convertMatricesToIntervalMatrices(a);
-//
-//    // 打印转换结果
-//    for (const auto& intervalMat : aab.interval_data_matrix) {
-//        for (u32_t i = 0; i < intervalMat.rows(); ++i) {
-//            for (u32_t j = 0; j < intervalMat.cols(); ++j) {
-//                std::cout << intervalMat(i, j) << "\t";
-//            }
-//            std::cout << std::endl;
-//        }
-//        std::cout<<"****************"<<std::endl;
-//    }
-
-    /// For testing ConvNode
-    /// 1.1 create filter.value: Matrices value;
-    /// 1.2 std::vector<filter> filter
-    /// 2. create input data: Matrices
-    /// 3. create bias
-
-
-
-//    // Init input data
-//    Matrices input(3);
-//    input[0] = (Mat(2, 2) << 1, 2, 3, 4).finished();
-//    input[1] = (Mat(2, 2) << 5, 6, 7, 8).finished();
-//    input[2] = (Mat(2, 2) << 9, 10, 11, 12).finished();
-//
-//    // Define Kernel 1
-//    Matrices kernel1Weights = {
-//        (Mat(2, 2) << 1, 0, 0, -1).finished(),
-//        (Mat(2, 2) << -1, 1, 1, 0).finished(),
-//        (Mat(2, 2) << 0, -1, 1, 1).finished()
-//    };
-//
-//    // Define Kernel 2
-//    Matrices kernel2Weights = {
-//        (Mat(2, 2) << 0, 1, -1, 0).finished(),
-//        (Mat(2, 2) << 1, 0, 0, -1).finished(),
-//        (Mat(2, 2) << -1, 1, 1, 0).finished()
-//    };
-//
-//    // Define Kernel 3
-//    Matrices kernel3Weights = {
-//        (Mat(2, 2) << -1, 0, 0, 1).finished(),
-//        (Mat(2, 2) << 0, -1, 1, 1).finished(),
-//        (Mat(2, 2) << 1, 0, -1, -1).finished()
-//    };
-//
-//    // Define Kernel 4
-//    Matrices kernel4Weights = {
-//        (Mat(2, 2) << -1, 0, 0, 1).finished(),
-//        (Mat(2, 2) << 0, -1, 1, 1).finished(),
-//        (Mat(2, 2) << 1, 0, -1, -1).finished()
-//    };
-//
-//
-//    // Filter
-//    FilterSubNode kernel1(kernel1Weights);
-//    FilterSubNode kernel2(kernel2Weights);
-//    FilterSubNode kernel3(kernel3Weights);
-//    FilterSubNode kernel4(kernel4Weights);
-//
-//    std::vector<FilterSubNode> filters = {kernel1, kernel2, kernel3, kernel4};
-//
-//    // Define filter
-//    //    std::vector<Filter> filters;
-//    std::vector<double> biases = {1, 1, 1, 1}; // 偏置项
-//
-//
-//    // pad = 1; stride = 1;
-//    u32_t padding = 1;
-//    u32_t stride = 1;
-//
-//    // ConvNode info
-//    NodeID id = 3;
-//
-//    ConvNeuronNode convLayer(id, filters, biases, padding, stride);
-//
-//    // using evaluate() to process input
-////    Matrices output = convLayer.evaluate(input);
-//    SolverEvaluate solver(input);
-//    solver.setIRMatrix(input);
-//    Matrices newIRRes = solver.ConvNeuronNodeevaluate(&convLayer);
-//
-//    // Output
-//    for (size_t i = 0; i < newIRRes.size(); ++i) {
-//        std::cout << "Output feature map " << i + 1 << ":\n" << newIRRes[i] << "\n\n";
-//    }
-
-
-    return 0;
 }
 
 

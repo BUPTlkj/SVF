@@ -36,6 +36,9 @@
 #include "AE/Core/RelExeState.h"
 #include "AE/Core/RelationSolver.h"
 
+#include "../../../svf-onnx/NNLoaddata.h"
+#include "SVF-LLVM/NNgraphBuilder.h"
+
 using namespace SVF;
 using namespace SVFUtil;
 
@@ -44,6 +47,12 @@ static Option<bool> SYMABS(
     "symabs",
     "symbolic abstraction test",
     false
+);
+
+static Option<bool> INNGT(
+    "intervalnn",
+    "interval nngraph test",
+    true
 );
 
 class SymblicAbstractionTest
@@ -646,12 +655,151 @@ int main(int argc, char** argv)
         SymblicAbstractionTest saTest;
         saTest.testsValidation();
         return 0;
+    }else if(INNGT()){
+        ////    std::string address = "/Users/liukaijie/Desktop/operation-py/convSmallRELU__Point.onnx";
+        //////    std::string address = "/Users/liukaijie/Desktop/operation-py/mnist_conv_maxpool.onnx";
+        std::string address = "/Users/liukaijie/Desktop/operation-py/ffnnRELU__Point_6_500.onnx";
+
+        /// parse onnx into svf-onnx
+        SVFNN svfnn(address);
+        auto nodes = svfnn.get_nodes();
+
+        /// Init nn-graph builder
+        NNGraphBuilder nngraph;
+
+        /// Init & Add node
+        for (const auto& node : nodes) {
+            std::visit(nngraph, node);
+        }
+
+        /// Init & Add Edge
+        nngraph.AddEdges();
+
+        /// Load dataset: mnist or cifa-10
+        //    LoadData dataset("cifar");
+        LoadData dataset("mnist");
+        /// Input pixel matrix
+        auto x = dataset.read_dataset();
+        std::cout<<"Label: "<<x.first.front()<<std::endl;
+
+        //    double perti = 0.001;
+        //    auto per_x = dataset.perturbateImages(x, perti);
+        //
+        /// Run abstract interpretation on NNgraph
+            nngraph.Traversal(x.second.front());
+
+        /// Run abstract interpretation on NNgraph Interval
+//        IntervalMatrices in_x = svfnn.convertMatricesToIntervalMatrices(x.second.front()) ;
+//        nngraph.IntervalTraversal(in_x);
+
+        //
+        //    NNgraphIntervalSolver aab(x.second.front());
+        //    NNgraphIntervalSolver aab;
+        //    aab.initializeMatrix();
+        //
+        //    Matrices a;
+        //    Mat mat(2, 2);
+        //    Mat mat1(2, 2);
+        //    mat << 1.26, 8.32,
+        //        2.56, 2.89;
+        //
+        //    mat1 << 1.289, 2.564,
+        //            3.2, 4.98;
+        //    a.push_back(mat);
+        //    a.push_back(mat1);
+        //
+        //    // Convert
+        //    auto aa = aab.convertMatricesToIntervalMatrices(a);
+        //
+        //    // 打印转换结果
+        //    for (const auto& intervalMat : aab.interval_data_matrix) {
+        //        for (u32_t i = 0; i < intervalMat.rows(); ++i) {
+        //            for (u32_t j = 0; j < intervalMat.cols(); ++j) {
+        //                std::cout << intervalMat(i, j) << "\t";
+        //            }
+        //            std::cout << std::endl;
+        //        }
+        //        std::cout<<"****************"<<std::endl;
+        //    }
+
+        /// For testing ConvNode
+        /// 1.1 create filter.value: Matrices value;
+        /// 1.2 std::vector<filter> filter
+        /// 2. create input data: Matrices
+        /// 3. create bias
+
+
+
+        //    // Init input data
+        //    Matrices input(3);
+        //    input[0] = (Mat(2, 2) << 1, 2, 3, 4).finished();
+        //    input[1] = (Mat(2, 2) << 5, 6, 7, 8).finished();
+        //    input[2] = (Mat(2, 2) << 9, 10, 11, 12).finished();
+        //
+        //    // Define Kernel 1
+        //    Matrices kernel1Weights = {
+        //        (Mat(2, 2) << 1, 0, 0, -1).finished(),
+        //        (Mat(2, 2) << -1, 1, 1, 0).finished(),
+        //        (Mat(2, 2) << 0, -1, 1, 1).finished()
+        //    };
+        //
+        //    // Define Kernel 2
+        //    Matrices kernel2Weights = {
+        //        (Mat(2, 2) << 0, 1, -1, 0).finished(),
+        //        (Mat(2, 2) << 1, 0, 0, -1).finished(),
+        //        (Mat(2, 2) << -1, 1, 1, 0).finished()
+        //    };
+        //
+        //    // Define Kernel 3
+        //    Matrices kernel3Weights = {
+        //        (Mat(2, 2) << -1, 0, 0, 1).finished(),
+        //        (Mat(2, 2) << 0, -1, 1, 1).finished(),
+        //        (Mat(2, 2) << 1, 0, -1, -1).finished()
+        //    };
+        //
+        //    // Define Kernel 4
+        //    Matrices kernel4Weights = {
+        //        (Mat(2, 2) << -1, 0, 0, 1).finished(),
+        //        (Mat(2, 2) << 0, -1, 1, 1).finished(),
+        //        (Mat(2, 2) << 1, 0, -1, -1).finished()
+        //    };
+        //
+        //
+        //    // Filter
+        //    FilterSubNode kernel1(kernel1Weights);
+        //    FilterSubNode kernel2(kernel2Weights);
+        //    FilterSubNode kernel3(kernel3Weights);
+        //    FilterSubNode kernel4(kernel4Weights);
+        //
+        //    std::vector<FilterSubNode> filters = {kernel1, kernel2, kernel3, kernel4};
+        //
+        //    // Define filter
+        //    //    std::vector<Filter> filters;
+        //    std::vector<double> biases = {1, 1, 1, 1}; // 偏置项
+        //
+        //
+        //    // pad = 1; stride = 1;
+        //    u32_t padding = 1;
+        //    u32_t stride = 1;
+        //
+        //    // ConvNode info
+        //    NodeID id = 3;
+        //
+        //    ConvNeuronNode convLayer(id, filters, biases, padding, stride);
+        //
+        //    // using evaluate() to process input
+        ////    Matrices output = convLayer.evaluate(input);
+        //    SolverEvaluate solver(input);
+        //    solver.setIRMatrix(input);
+        //    Matrices newIRRes = solver.ConvNeuronNodeevaluate(&convLayer);
+        //
+        //    // Output
+        //    for (size_t i = 0; i < newIRRes.size(); ++i) {
+        //        std::cout << "Output feature map " << i + 1 << ":\n" << newIRRes[i] << "\n\n";
+        //    }
+
+        return 0;
     }
-        //    else if(){
-//        //fun
-//
-//        return 0;
-//    }
 
     SVFModule *svfModule = LLVMModuleSet::getLLVMModuleSet()->buildSVFModule(moduleNameVec);
     SVFIRBuilder builder(svfModule);

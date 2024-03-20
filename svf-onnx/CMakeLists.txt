@@ -1,18 +1,13 @@
-find_package(Python 3.11 EXACT COMPONENTS Interpreter Development REQUIRED)
 
 #target_link_libraries (${PROJECT_NAME} ${PYTHON_DL})
 
 add_executable(svf-onnx
         SVFONNX.cpp
-        SVFONNX.h
-        Solver.cpp
-        Solver.h
-        Solver.h
-        Loaddata.cpp
-        Loaddata.h
-        Loaddata.h
-        IntervalSolver.cpp
-        IntervalSolver.h)
+        NNLoaddata.cpp
+)
+
+add_library(SvfONNX SVFONNX.cpp
+        NNLoaddata.cpp)
 
 message("Python INCLUDE DIR: ${Python_INCLUDE_DIRS}")
 message("Python LIB DIR: ${Python_LIBRARIES}")
@@ -24,3 +19,7 @@ message("SVF INSTALL INCLUDE DIR: ${SVF_INSTALL_INCLUDE_DIR}")
 target_include_directories(svf-onnx PRIVATE $<BUILD_INTERFACE: ${CMAKE_SOURCE_DIR}/svf/include>
         $<INSTALL_INTERFACE:${SVF_INSTALL_INCLUDE_DIR} ${Python_INCLUDE_DIRS})
 target_link_libraries(svf-onnx PRIVATE ${Python_LIBRARIES} SvfCore)
+
+target_include_directories(SvfONNX PRIVATE $<BUILD_INTERFACE: ${CMAKE_SOURCE_DIR}/svf/include>
+        $<INSTALL_INTERFACE:${SVF_INSTALL_INCLUDE_DIR} ${Python_INCLUDE_DIRS})
+target_link_libraries(SvfONNX PRIVATE ${Python_LIBRARIES} SvfCore)

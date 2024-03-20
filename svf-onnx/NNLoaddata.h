@@ -1,7 +1,7 @@
 
 
-#ifndef SVF_LOADDATA_H
-#define SVF_LOADDATA_H
+#ifndef SVF_NNLOADDATA_H
+#define SVF_NNLOADDATA_H
 
 #include "Eigen/Dense"
 #include "Graphs/NNNode.h"
@@ -37,8 +37,8 @@ public:
         if (dataset == "mnist" or dataset == "cifar"){
             std::cout << "Loading " << dataset << " ......" << std::endl;
         }else{
-            throw std::runtime_error(
-                "UNSUPPORT DATASET, ONLY SUPPORT MNIST AND CIFAR 10");
+            std::cout<<"UNSUPPORT DATASET, ONLY SUPPORT MNIST AND CIFAR 10"<<std::endl;
+            exit(0);
         }
     }
 
@@ -52,4 +52,4 @@ public:
 
 
 
-#endif // SVF_LOADDATA_H
+#endif // SVF_NNLOADDATA_H

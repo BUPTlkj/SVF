@@ -1,4 +1,4 @@
-#include "IntervalSolver.h"
+#include "AE/Nnexe/NNgraphIntervalSolver.h"
 
 using namespace SVF;
 template<typename T>
@@ -12,7 +12,7 @@ bool isInt(T&& var) {
 }
 
 //typedef Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic> myMatrixXd;
-void IntervalSolver::initializeMatrix() {
+void NNgraphIntervalSolver::initializeMatrix() {
 
 //    typedef Eigen::Matrix<IntervalValue, Eigen::Dynamic, Eigen::Dynamic> myMatrixXd;
 //    u32_t a = 2;
@@ -94,7 +94,7 @@ void IntervalSolver::initializeMatrix() {
     }
 }
 
-std::pair<Matrices, Matrices> IntervalSolver::splitIntervalMatrices(const IntervalMatrices & intervalMatrices) {
+std::pair<Matrices, Matrices> NNgraphIntervalSolver::splitIntervalMatrices(const IntervalMatrices & intervalMatrices) {
     Matrices lowerBounds, upperBounds;
 
     for (const auto& intervalMatrix : intervalMatrices) {
@@ -115,7 +115,7 @@ std::pair<Matrices, Matrices> IntervalSolver::splitIntervalMatrices(const Interv
     return {lowerBounds, upperBounds};
 }
 
-IntervalMatrices IntervalSolver::ReLuNeuronNodeevaluate() const {
+IntervalMatrices NNgraphIntervalSolver::ReLuNeuronNodeevaluate() const {
     std::cout << "Reluing....." << std::endl;
     IntervalMatrices x_out;
     for (const auto& mat : in_x) { /// using auto& avoid copy
@@ -138,7 +138,7 @@ IntervalMatrices IntervalSolver::ReLuNeuronNodeevaluate() const {
     return x_out;
 }
 
-IntervalMatrices IntervalSolver::FlattenNeuronNodeevaluate() const{
+IntervalMatrices NNgraphIntervalSolver::FlattenNeuronNodeevaluate() const{
     std::cout<<"Flattening....."<<std::endl;
 
     u32_t in_depth = in_x.size();
@@ -162,7 +162,7 @@ IntervalMatrices IntervalSolver::FlattenNeuronNodeevaluate() const{
 
 }
 
-IntervalMatrices IntervalSolver::BasicOPNeuronNodeevaluate( const BasicOPNeuronNode *basic){
+IntervalMatrices NNgraphIntervalSolver::BasicOPNeuronNodeevaluate( const BasicOPNeuronNode *basic){
     std::cout<<"BasicNoding...... The input size: "<<in_x.size()<<std::endl;
 
     IntervalMatrices result;
@@ -213,7 +213,7 @@ IntervalMatrices IntervalSolver::BasicOPNeuronNodeevaluate( const BasicOPNeuronN
     return result;
 }
 
-IntervalMatrices IntervalSolver::MaxPoolNeuronNodeevaluate( const MaxPoolNeuronNode *maxpool){
+IntervalMatrices NNgraphIntervalSolver::MaxPoolNeuronNodeevaluate( const MaxPoolNeuronNode *maxpool){
     std::cout<<"Maxpooling....."<<std::endl;
     IntervalMatrices out_x;
     u32_t in_height = in_x[0].rows();
@@ -285,7 +285,7 @@ IntervalMatrices IntervalSolver::MaxPoolNeuronNodeevaluate( const MaxPoolNeuronN
     return out_x;
 }
 
-IntervalMatrices IntervalSolver::FullyConNeuronNodeevaluate( const FullyConNeuronNode *fully){
+IntervalMatrices NNgraphIntervalSolver::FullyConNeuronNodeevaluate( const FullyConNeuronNode *fully){
     std::cout<<"FullyConing......"<<std::endl;
     /// The step of processing input flattening operation is equivalent to the GEMM node operation in ONNX
     u32_t in_depth = in_x.size();
@@ -319,7 +319,7 @@ IntervalMatrices IntervalSolver::FullyConNeuronNodeevaluate( const FullyConNeuro
     return out_x;
 }
 
-IntervalMatrices IntervalSolver::ConvNeuronNodeevaluate( const ConvNeuronNode *conv){
+IntervalMatrices NNgraphIntervalSolver::ConvNeuronNodeevaluate( const ConvNeuronNode *conv){
     std::cout<<"ConvNodeing......"<<conv->getId()<<std::endl;
 
     u32_t filter_num = conv->get_filter_num();
@@ -378,7 +378,7 @@ IntervalMatrices IntervalSolver::ConvNeuronNodeevaluate( const ConvNeuronNode *c
     return out;
 }
 
-IntervalMatrices IntervalSolver::ConstantNeuronNodeevaluate() const{
+IntervalMatrices NNgraphIntervalSolver::ConstantNeuronNodeevaluate() const{
     std::cout<<"Constanting....... "<<std::endl;
     /// This is an entry, nothing needs to do.
     return in_x;

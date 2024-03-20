@@ -128,6 +128,8 @@ message(STATUS "Z3 STATUS:
   Z3 library file:        ${Z3_LIBRARIES}
   Z3 include directory:   ${Z3_INCLUDES}")
 
+find_package(Python 3.11 EXACT COMPONENTS Interpreter Development REQUIRED)
+
 # Add the Z3 include directory and link the Z3 library to all targets of SVF
 link_libraries(${Z3_LIBRARIES})
 include_directories(SYSTEM ${Z3_INCLUDES})

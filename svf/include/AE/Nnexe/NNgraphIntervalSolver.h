@@ -1,13 +1,13 @@
-#ifndef SVF_INTERVALSOLVER_H
-#define SVF_INTERVALSOLVER_H
-#include "../svf/include/AE/Core/IntervalValue.h"
+#ifndef SVF_NNGRAPHINTERVALSOLVER_H
+#define SVF_NNGRAPHINTERVALSOLVER_H
+#include "AE/Core/IntervalValue.h"
 #include "Eigen/Dense"
-#include "../svf/include/Graphs/NNNode.h"
+#include "Graphs/NNNode.h"
 
 namespace SVF
 {
 
-class IntervalSolver
+class NNgraphIntervalSolver
 {
 public:
 
@@ -17,9 +17,9 @@ public:
     IntervalMatrices in_x;
 
     /// Constructor, only accepts pixel matrix, converts to IntervalMatrix
-    IntervalSolver(const IntervalMatrices in): interval_data_matrix(in){
+    NNgraphIntervalSolver(const IntervalMatrices in): interval_data_matrix(in){
           };
-    IntervalSolver(){};
+    NNgraphIntervalSolver(){};
 
     inline IntervalMatrices get_in_x(){
               return in_x;
@@ -56,4 +56,4 @@ public:
 
 }/// SVF namespace
 
-#endif // SVF_INTERVALSOLVER_H
+#endif // SVF_NNGRAPHINTERVALSOLVER_H
