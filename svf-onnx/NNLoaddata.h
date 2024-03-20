@@ -13,7 +13,7 @@ namespace SVF
 {
 
 /// Label
-typedef std::vector<signed> LabelVector;
+typedef std::vector<u32_t> LabelVector;
 
 /// Image pixel matrix
 typedef std::vector<Matrices> MatrixVector_3c;
@@ -21,7 +21,7 @@ typedef std::vector<Matrices> MatrixVector_3c;
 /// Upper & lower Bound
 struct LabelAndBounds
 {
-    signed label;
+    u32_t label;
     Matrices matrix_lb;
     Matrices matrix_ub;
 };
@@ -30,10 +30,10 @@ class LoadData
 {
 public:
     std::string dataset;
+    u32_t data_num;
 
 public:
-    LoadData(std::string name) : dataset{name}
-    {
+    LoadData(std::string name, u32_t num) : dataset{name}, data_num(num){
         if (dataset == "mnist" or dataset == "cifar"){
             std::cout << "Loading " << dataset << " ......" << std::endl;
         }else{
@@ -47,7 +47,8 @@ public:
     /// Perturbation function
     std::vector<LabelAndBounds> perturbateImages( const std::pair<LabelVector, MatrixVector_3c>& labelImagePairs, double eps);
 
-};
+    std::vector<std::pair<u32_t , IntervalMatrices>> convertLabelAndBoundsToIntervalMatrices(const std::vector<LabelAndBounds>& labelAndBoundsVec);
+    };
 }
 
 

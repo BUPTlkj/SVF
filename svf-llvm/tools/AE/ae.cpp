@@ -656,9 +656,10 @@ int main(int argc, char** argv)
         saTest.testsValidation();
         return 0;
     }else if(INNGT()){
-        ////    std::string address = "/Users/liukaijie/Desktop/operation-py/convSmallRELU__Point.onnx";
-        //////    std::string address = "/Users/liukaijie/Desktop/operation-py/mnist_conv_maxpool.onnx";
+//        std::string address = "/Users/liukaijie/Desktop/operation-py/convSmallRELU__Point.onnx";
+//        std::string address = "/Users/liukaijie/Desktop/operation-py/mnist_conv_maxpool.onnx";
         std::string address = "/Users/liukaijie/Desktop/operation-py/ffnnRELU__Point_6_500.onnx";
+//        std::string address = "/Users/liukaijie/Desktop/operation-py/convMedGRELU__Point.onnx";
 
         /// parse onnx into svf-onnx
         SVFNN svfnn(address);
@@ -677,20 +678,34 @@ int main(int argc, char** argv)
 
         /// Load dataset: mnist or cifa-10
         //    LoadData dataset("cifar");
-        LoadData dataset("mnist");
+        LoadData dataset("mnist", 1);
         /// Input pixel matrix
-        auto x = dataset.read_dataset();
+        std::pair<LabelVector, MatrixVector_3c> x = dataset.read_dataset();
         std::cout<<"Label: "<<x.first.front()<<std::endl;
 
-        //    double perti = 0.001;
-        //    auto per_x = dataset.perturbateImages(x, perti);
-        //
+        double perti = 0.001;
+        std::vector<LabelAndBounds> per_x = dataset.perturbateImages(x, perti);
+
         /// Run abstract interpretation on NNgraph
-            nngraph.Traversal(x.second.front());
+//            nngraph.Traversal(x.second.front());
 
         /// Run abstract interpretation on NNgraph Interval
-//        IntervalMatrices in_x = svfnn.convertMatricesToIntervalMatrices(x.second.front()) ;
-//        nngraph.IntervalTraversal(in_x);
+        std::vector<std::pair<u32_t, IntervalMatrices>> in_x = dataset.convertLabelAndBoundsToIntervalMatrices(per_x) ;
+        for(u32_t i = 0; i < in_x.size(); i++){
+            std::cout<<in_x[i].first<<std::endl;
+            for(const auto&intervalMat: in_x[i].second){
+                std::cout << "IntervalMatrix :\n";
+                std::cout << "Rows: " << intervalMat.rows() << ", Columns: " << intervalMat.cols() << "\n";
+                for (u32_t k = 0; k < intervalMat.rows(); ++k) {
+                    for (u32_t j = 0; j < intervalMat.cols(); ++j) {
+                        std::cout<< "[ "<< intervalMat(k, j).lb().getRealNumeral()<<", "<< intervalMat(k, j).ub().getRealNumeral() <<" ]"<< "\t";
+                    }
+                    std::cout << std::endl;
+                }
+                std::cout<<"****************"<<std::endl;
+            }
+            nngraph.IntervalTraversal(in_x.front().second);
+        }
 
         //
         //    NNgraphIntervalSolver aab(x.second.front());
@@ -711,7 +726,7 @@ int main(int argc, char** argv)
         //    // Convert
         //    auto aa = aab.convertMatricesToIntervalMatrices(a);
         //
-        //    // 打印转换结果
+        //    // print the result
         //    for (const auto& intervalMat : aab.interval_data_matrix) {
         //        for (u32_t i = 0; i < intervalMat.rows(); ++i) {
         //            for (u32_t j = 0; j < intervalMat.cols(); ++j) {

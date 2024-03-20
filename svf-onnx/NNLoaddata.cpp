@@ -27,13 +27,13 @@ std::pair<LabelVector, MatrixVector_3c> LoadData::read_dataset(){
             ///  format: label, pixel...(0-255)
             getline(ss,value,',');
             /// convert into integer
-            signed label = std::stoi(value);
+            u32_t label = std::stoi(value);
             /// label set
             labels.push_back(label);
 
             /// mnist 1*28*28
             Matrices image_matrix(1, Mat(28, 28));
-            unsigned channel = 0, row = 0, col = 0;
+            u32_t channel = 0, row = 0, col = 0;
 
             /// Image Matrix
             while(getline(ss,value,',')) {
@@ -49,8 +49,8 @@ std::pair<LabelVector, MatrixVector_3c> LoadData::read_dataset(){
             }
 
             matrixes_3c.push_back(image_matrix);
-            /// For Test
-            if(matrixes_3c.size()==1){
+            /// For Test, control the number of data
+            if(matrixes_3c.size()==data_num){
                 break;
             }
         }
@@ -72,10 +72,10 @@ std::pair<LabelVector, MatrixVector_3c> LoadData::read_dataset(){
             std::string value;
 
             getline(ss, value, ',');
-            s32_t label = std::stoi(value);
+            u32_t label = std::stoi(value);
             labels.push_back(label);
 
-            /// cifar10, 3*32*32
+            /// cifar 10, 3*32*32
             Matrices image_matrix(3, Mat(32, 32));
             u32_t channel = 0, row = 0, col = 0;
 
@@ -91,8 +91,8 @@ std::pair<LabelVector, MatrixVector_3c> LoadData::read_dataset(){
                 }
             }
             matrixes_3c.push_back(image_matrix);
-            /// For Test
-            if(matrixes_3c.size()==1){
+            /// For Test, control the number of data
+            if(matrixes_3c.size()==data_num){
                 break;
             }
         }
@@ -108,8 +108,8 @@ std::vector<LabelAndBounds> LoadData::perturbateImages(
 
     std::vector<LabelAndBounds> result;
 
-    for (size_t i = 0; i < labelImagePairs.first.size(); ++i) {
-        s32_t label = labelImagePairs.first[i];
+    for (u32_t i = 0; i < labelImagePairs.first.size(); ++i) {
+        u32_t label = labelImagePairs.first[i];
         const Matrices& originalMatrix = labelImagePairs.second[i];
 
         Matrices matrix_lb;
@@ -128,5 +128,36 @@ std::vector<LabelAndBounds> LoadData::perturbateImages(
 
         result.push_back({label, matrix_lb, matrix_ub});
     }
+    return result;
+}
+
+std::vector<std::pair<u32_t , IntervalMatrices>> LoadData::convertLabelAndBoundsToIntervalMatrices(const std::vector<LabelAndBounds>& labelAndBoundsVec) {
+    std::vector<std::pair<u32_t , IntervalMatrices>> result;
+
+    for (const auto& labelAndBounds : labelAndBoundsVec) {
+        IntervalMatrices intervalMatrices;
+
+        /// ensure each LabelAndBounds: matrix_lb & matrix_ub have the same size
+        assert(labelAndBounds.matrix_lb.size() == labelAndBounds.matrix_ub.size());
+
+        /// Traversal matrix_lb & matrix_ub£¬create an pad IntervalMat
+        for (u32_t i = 0; i < labelAndBounds.matrix_lb.size(); ++i) {
+            const Mat& lb = labelAndBounds.matrix_lb[i];
+            const Mat& ub = labelAndBounds.matrix_ub[i];
+
+            IntervalMat intervalMat(lb.rows(), lb.cols());
+
+            for (u32_t r = 0; r < lb.rows(); ++r) {
+                for (u32_t c = 0; c < lb.cols(); ++c) {
+                    intervalMat(r, c) = IntervalValue(lb(r, c), ub(r, c));
+                }
+            }
+
+            intervalMatrices.push_back(intervalMat);
+        }
+
+        result.emplace_back(labelAndBounds.label, intervalMatrices);
+    }
+
     return result;
 }

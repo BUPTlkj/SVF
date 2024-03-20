@@ -344,7 +344,6 @@ public:
           NeuronNode(id, ConstantNode),
           filter_depth{ fil[0].get_depth() }, filter_width{ fil[0].get_width() },filter_height{ fil[0].get_height() }, filter_num(fil.size()), filter(fil),
           bias{b}, Intervalbias(idouble), padding(pad), stride(str){
-        std::cout<<filter_num<<"   "<<filter_depth<<"   "<<filter_width<<"    "<<filter_height<<std::endl;
     }
 
     static inline bool classof(const ConvNeuronNode *)
