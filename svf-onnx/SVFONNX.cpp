@@ -33,6 +33,7 @@ SVFNN::SVFNN(std::string adress): onnxAdress{adress}{
     std::string Gemm = "Gemm";
     std::string Conv = "Conv";
     std::string Relu = "Relu";
+    std::string  Flatten = "Flatten";
     /// 22 Feb
     std::string MaxPool = "MaxPool";
     /// The information of Maxpool and conv is in SpecialInfo
@@ -46,6 +47,7 @@ SVFNN::SVFNN(std::string adress): onnxAdress{adress}{
     FullyconnectedInfo gemmnode;
     ConvNodeInfo convnode;
     ReluNodeInfo relunode;
+    FlattenNodeInfo flattennode;
     MaxPoolNodeInfo maxpoolnode;
 
     std::map<std::string, std::pair<std::pair<u32_t, u32_t>, std::pair<u32_t, u32_t>>> convItems;
@@ -135,6 +137,9 @@ SVFNN::SVFNN(std::string adress): onnxAdress{adress}{
                         maxpoolnode.strides = maxInfo.second.second;
                     }
                     nodes.push_back(maxpoolnode);
+                }else if(name.find(Flatten) != std::string::npos){
+                    flattennode.name = name;
+                    nodes.push_back(flattennode);
                 }
             }
         }
@@ -613,6 +618,7 @@ private:
     std::unordered_map<std::string, ConstantNeuronNode*> ConstantNodeIns;
     std::unordered_map<std::string, ConvNeuronNode*> ConvNodeIns;
     std::unordered_map<std::string, ReLuNeuronNode*> ReLuNodeIns;
+    std::unordered_map<std::string, FlattenNeuronNode*> FlattenNodeIns;
     std::unordered_map<std::string, MaxPoolNeuronNode*> MaxPoolNodeIns;
     std::unordered_map<std::string, FullyConNeuronNode*> FullyConNodeIns;
     std::unordered_map<std::string, BasicOPNeuronNode*> BasicOPNodeIns;
@@ -691,6 +697,13 @@ public:
         g->addReLuNeuronNode(ReLuNodeIns[node.name]);
     }
 
+    void operator()(const FlattenNodeInfo& node) {
+        auto id = getNodeID(node.name);
+        OrderedNodeName.push_back(node.name);
+        FlattenNodeIns[node.name] = new FlattenNeuronNode(id);
+        g->addFlattenNeuronNode(FlattenNodeIns[node.name]);
+    }
+
     void operator()(const MaxPoolNodeInfo& node) {
         auto id = getNodeID(node.name);
         OrderedNodeName.push_back(node.name);
@@ -705,16 +718,19 @@ public:
         if (auto it = MaxPoolNodeIns.find(name); it != MaxPoolNodeIns.end()) return it->second;
         if (auto it = FullyConNodeIns.find(name); it != FullyConNodeIns.end()) return it->second;
         if (auto it = BasicOPNodeIns.find(name); it != BasicOPNodeIns.end()) return it->second;
+        if (auto it = FlattenNodeIns.find(name); it != FlattenNodeIns.end()) return it->second;
+
         return std::monostate{};
     }
 
-    NeuronNode* getNodeInstanceByName1(const std::string& name) const {
+    NeuronNode* getNeuronNodeInstanceByName(const std::string& name) const {
         if (auto it = ConstantNodeIns.find(name); it != ConstantNodeIns.end()) return it->second;
         if (auto it = ConvNodeIns.find(name); it != ConvNodeIns.end()) return it->second;
         if (auto it = ReLuNodeIns.find(name); it != ReLuNodeIns.end()) return it->second;
         if (auto it = MaxPoolNodeIns.find(name); it != MaxPoolNodeIns.end()) return it->second;
         if (auto it = FullyConNodeIns.find(name); it != FullyConNodeIns.end()) return it->second;
         if (auto it = BasicOPNodeIns.find(name); it != BasicOPNodeIns.end()) return it->second;
+        if (auto it = FlattenNodeIns.find(name); it != FlattenNodeIns.end()) return it->second;
         return nullptr;
     }
 
@@ -728,8 +744,8 @@ public:
             const auto& currentName = OrderedNodeName[i];
             const auto& nextName = OrderedNodeName[i + 1];
 
-            NeuronNode* currentNode = getNodeInstanceByName1(currentName);
-            NeuronNode* nextNode = getNodeInstanceByName1(nextName);
+            NeuronNode* currentNode = getNeuronNodeInstanceByName(currentName);
+            NeuronNode* nextNode = getNeuronNodeInstanceByName(nextName);
 
             if (currentNode && nextNode) {
                 /// Ensure edge is created as a unique_ptr<Direct2NeuronEdge>

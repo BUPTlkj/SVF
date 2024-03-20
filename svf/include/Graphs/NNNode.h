@@ -24,12 +24,13 @@ class MaxPoolNeuronNode;
 class FullyConNeuronNode;
 class ConvNeuronNode;
 class ConstantNeuronNode;
+class FlattenNeuronNode;
 
 using NeuronNodeVariant =
     std::variant<std::monostate, ConstantNeuronNode*,
                  BasicOPNeuronNode*, FullyConNeuronNode*,
                  ConvNeuronNode*, ReLuNeuronNode*,
-                 MaxPoolNeuronNode*>;
+                 MaxPoolNeuronNode*, FlattenNeuronNode*>;
 
 typedef GenericNode<NeuronNode, NeuronEdge> GenericNeuronNodeTy;
 class NeuronNode: public GenericNeuronNodeTy{
@@ -46,7 +47,8 @@ public:
         Sub,          //6
         Add,          //7
         Mul,          //8
-        Div           //9
+        Div,          //9
+        FlattenNode   //10
     };
 
     typedef NeuronEdge::NeuronGraphEdgeSetTy::iterator iterator;
@@ -159,6 +161,37 @@ public:
     const std::string toString() const override;
 
 };
+
+
+class FlattenNeuronNode:public NeuronNode{
+
+public:
+    /// Build ReLu Node
+    FlattenNeuronNode(NodeID id):
+          NeuronNode(id, FlattenNode){}
+
+    static inline bool classof(const FlattenNeuronNode *)
+    {
+        return true;
+    }
+
+    static inline bool classof(const NeuronNode *node)
+    {
+        return node->getNodeKind() == FlattenNode;
+    }
+
+    static inline bool classof(const GenericNeuronNodeTy *node)
+    {
+        return node->getNodeKind() == FlattenNode;
+    }
+
+public:
+    NodeK get_type() const override;
+
+    const std::string toString() const override;
+
+};
+
 
 class BasicOPNeuronNode:public NeuronNode{
 public:

@@ -21,9 +21,31 @@ Matrices SolverEvaluate::ReLuNeuronNodeevaluate() const{
     return x_out;
 }
 
+Matrices SolverEvaluate::FlattenNeuronNodeevaluate() const{
+    std::cout<<"Flattening....."<<std::endl;
+
+    u32_t in_depth = in_x.size();
+    u32_t in_height = in_x[0].rows();
+    u32_t in_width = in_x[0].cols();
+
+    Matrices x_out;
+
+    Vector flatten_x(in_depth * in_height * in_width);
+    for (u32_t i = 0; i < in_depth; i++) {
+        for (u32_t j = 0; j < in_height; j++) {
+            for (u32_t k = 0; k < in_width; k++) {
+                flatten_x(in_width * in_depth * j + in_depth * k + i) = in_x[i](j, k);
+            }
+        }
+    }
+    Mat temp = flatten_x;
+    x_out.push_back(temp);
+
+    return x_out;
+}
+
 Matrices SolverEvaluate::BasicOPNeuronNodeevaluate( const BasicOPNeuronNode *basic) const{
     std::cout<<"BasicNoding......"<<std::endl;
-
 
     Matrices result;
 
@@ -69,14 +91,14 @@ Matrices SolverEvaluate::BasicOPNeuronNodeevaluate( const BasicOPNeuronNode *bas
 Matrices SolverEvaluate::MaxPoolNeuronNodeevaluate( const MaxPoolNeuronNode *maxpool) const{
     std::cout<<"Maxpooling....."<<std::endl;
     Matrices out_x;
-    auto in_height = in_x[0].rows();
-    auto in_width = in_x[0].cols();
-    auto pad_height = maxpool->pad_height;
-    auto pad_width = maxpool->pad_width;
-    auto window_width = maxpool->window_width;
-    auto window_height = maxpool->window_height;
-    auto stride_height = maxpool->stride_height;
-    auto stride_width = maxpool->stride_width;
+    u32_t in_height = in_x[0].rows();
+    u32_t in_width = in_x[0].cols();
+    u32_t pad_height = maxpool->pad_height;
+    u32_t pad_width = maxpool->pad_width;
+    u32_t window_width = maxpool->window_width;
+    u32_t window_height = maxpool->window_height;
+    u32_t stride_height = maxpool->stride_height;
+    u32_t stride_width = maxpool->stride_width;
 
     for (size_t depth = 0; depth < in_x.size(); ++depth) {
         /// Padding
@@ -114,56 +136,48 @@ Matrices SolverEvaluate::MaxPoolNeuronNodeevaluate( const MaxPoolNeuronNode *max
 Matrices SolverEvaluate::FullyConNeuronNodeevaluate( const FullyConNeuronNode *fully) const{
     std::cout<<"FullyConing......"<<std::endl;
     /// The step of processing input flattening operation is equivalent to the GEMM node operation in ONNX
-    auto in_depth = in_x.size();
-    auto in_height = in_x[0].rows();
-    auto in_width = in_x[0].cols();
-    auto weight = fully->weight;
-    auto bias = fully->bias;
-///       1, b.size(), 1
-    u32_t out_width = 1;
-    u32_t out_height = bias.size();
-    u32_t out_depth = 1;
-
-    Vector x_ser(in_depth * in_height * in_width);
-    for (u32_t i = 0; i < in_depth; i++) {
-        for (u32_t j = 0; j < in_height; j++) {
-            for (u32_t k = 0; k < in_width; k++) {
-                x_ser(in_width * in_depth * j + in_depth * k + i) = in_x[i](j, k);
-            }
-        }
-    }
+    u32_t in_depth = in_x.size();
+    Mat weight = fully->weight;
+    Mat bias = fully->bias;
 
     ///wx+b
-    Vector val = weight * x_ser + bias;
-
-    /// Restore output
-    Matrices out;
-
-    /// Assignment
-    for (u32_t i = 0; i < out_depth; i++) {
-        out.push_back(Mat(out_height, out_width));
-        for (u32_t j = 0; j < out_height; j++) {
-            for (u32_t k = 0; k < out_width; k++) {
-                out[i](j, k) = val(out_width * out_depth * j + out_depth * k + i);
-            }
+    /// ensure(1, y, 1)
+    for (const auto& mat : in_x) {
+        if (mat.rows() != weight.cols() || mat.cols() != 1) {
+            throw std::runtime_error("In Flatten, false init");
         }
     }
-    return out;
+
+    /// c(x, 1)
+    if (bias.rows() != weight.rows() || bias.cols() != 1) {
+        throw std::runtime_error("In flatten, bias is wrong");
+    }
+
+    Matrices out_x;
+    out_x.reserve(in_depth);
+
+    /// weight * in_x[i] + bias -> out_x
+    for (const auto& mat : in_x) {
+        Eigen::MatrixXd tempResult = weight * mat + bias;
+        out_x.push_back(tempResult);
+    }
+
+    return out_x;
 }
 
 Matrices SolverEvaluate::ConvNeuronNodeevaluate( const ConvNeuronNode *conv) const{
     std::cout<<"ConvNodeing......"<<conv->getId()<<std::endl;
 
     u32_t filter_num = conv->get_filter_num();
-    auto stride = conv->get_stride();
-    auto padding = conv->get_padding();
-    auto filter = conv->get_filter();
-    auto filter_depth = conv->get_filter_depth();
-    auto filter_height = conv->get_filter_height();
-    auto filter_width = conv->get_filter_width();
-    auto bias = conv->get_bias();
-    auto out_height = ((in_x[0].rows() - filter[0].get_height() + 2*padding) / stride) + 1;
-    auto out_width = ((in_x[0].cols() - filter[0].get_width() + 2*padding) / stride) + 1;
+    u32_t stride = conv->get_stride();
+    u32_t padding = conv->get_padding();
+    std::vector<FilterSubNode> filter = conv->get_filter();
+    u32_t filter_depth = conv->get_filter_depth();
+    u32_t filter_height = conv->get_filter_height();
+    u32_t filter_width = conv->get_filter_width();
+    std::vector<double> bias = conv->get_bias();
+    u32_t out_height = ((in_x[0].rows() - filter[0].get_height() + 2*padding) / stride) + 1;
+    u32_t out_width = ((in_x[0].cols() - filter[0].get_width() + 2*padding) / stride) + 1;
 
     /// Padding
     Matrices padded_x(in_x.size());

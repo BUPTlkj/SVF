@@ -81,6 +81,12 @@ public:
         return sNode;
     }
 
+    /// Add Flatten Node
+    inline FlattenNeuronNode* addFlattenNeuronNode(FlattenNeuronNode* sNode){
+        addNeuronNode(sNode);
+        return sNode;
+    }
+
     /// get ReLu Node, Not using Currently
 //    inline ReLuNeuronNode* getaddReLuNeuronNode(const NeuronNode* node){
 //        const_iterator it =

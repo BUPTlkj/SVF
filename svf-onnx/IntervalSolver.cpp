@@ -138,6 +138,30 @@ IntervalMatrices IntervalSolver::ReLuNeuronNodeevaluate() const {
     return x_out;
 }
 
+IntervalMatrices IntervalSolver::FlattenNeuronNodeevaluate() const{
+    std::cout<<"Flattening....."<<std::endl;
+
+    u32_t in_depth = in_x.size();
+    u32_t in_height = in_x[0].rows();
+    u32_t in_width = in_x[0].cols();
+
+    IntervalMatrices x_out;
+
+    IntervalVector flatten_x(in_depth * in_height * in_width);
+    for (u32_t i = 0; i < in_depth; i++) {
+        for (u32_t j = 0; j < in_height; j++) {
+            for (u32_t k = 0; k < in_width; k++) {
+                flatten_x(in_width * in_depth * j + in_depth * k + i) = in_x[i](j, k);
+            }
+        }
+    }
+    IntervalMat temp = flatten_x;
+    x_out.push_back(temp);
+
+    return x_out;
+
+}
+
 IntervalMatrices IntervalSolver::BasicOPNeuronNodeevaluate( const BasicOPNeuronNode *basic){
     std::cout<<"BasicNoding...... The input size: "<<in_x.size()<<std::endl;
 
@@ -265,44 +289,34 @@ IntervalMatrices IntervalSolver::FullyConNeuronNodeevaluate( const FullyConNeuro
     std::cout<<"FullyConing......"<<std::endl;
     /// The step of processing input flattening operation is equivalent to the GEMM node operation in ONNX
     u32_t in_depth = in_x.size();
-    u32_t in_height = in_x[0].rows();
-    u32_t in_width = in_x[0].cols();
 
     IntervalMat Intervalweight = fully->Intervalweight;
     IntervalMat Intervalbias = fully->Intervalbias;
 
-    ///  1, b.size(), 1
-    u32_t out_width = 1;
-    u32_t out_height = Intervalbias.size();
-    u32_t out_depth = 1;
-
-    const u32_t rowsize = in_depth * in_height * in_width;
-    IntervalMat x_ser(rowsize,1);
-
-    for (u32_t i = 0; i < in_depth; i++) {
-        for (u32_t j = 0; j < in_height; j++) {
-            for (u32_t k = 0; k < in_width; k++) {
-                x_ser(in_width * in_depth * j + in_depth * k + i, 0) = in_x[i](j, k);
-            }
-        }
-    }
-
     ///wx+b
-    IntervalMat val = Intervalweight * x_ser + Intervalbias;
-
-    /// Restore output
-    IntervalMatrices out;
-
-    /// Assignment
-    for (u32_t i = 0; i < out_depth; i++) {
-        out.push_back(IntervalMat(out_height, out_width));
-        for (u32_t j = 0; j < out_height; j++) {
-            for (u32_t k = 0; k < out_width; k++) {
-                out[i](j, k) = val(out_width * out_depth * j + out_depth * k + i,0);
-            }
+    /// ensure(1, y, 1)
+    for (const auto& mat : in_x) {
+        if (mat.rows() != Intervalweight.cols() || mat.cols() != 1) {
+            std::cout<<mat.rows()<<", "<<Intervalweight.cols()<<", "<<mat.cols()<<std::endl;
+            throw std::runtime_error("In Flatten, false init");
         }
     }
-    return out;
+
+    /// c(x, 1)
+    if (Intervalbias.rows() != Intervalweight.rows() || Intervalbias.cols() != 1) {
+        throw std::runtime_error("In flatten, bias is wrong");
+    }
+
+    IntervalMatrices out_x;
+    out_x.reserve(in_depth);
+
+    /// weight * in_x[i] + bias -> out_x
+    for (const auto& mat : in_x) {
+        IntervalMat tempResult = Intervalweight * mat + Intervalbias;
+        out_x.push_back(tempResult);
+    }
+
+    return out_x;
 }
 
 IntervalMatrices IntervalSolver::ConvNeuronNodeevaluate( const ConvNeuronNode *conv){

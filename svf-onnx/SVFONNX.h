@@ -75,6 +75,12 @@ struct ReluNodeInfo
     std::string name;
 };
 
+/// Flatten
+struct FlattenNodeInfo
+{
+    std::string name;
+};
+
 /// maxpool
 struct MaxPoolNodeInfo
 {
@@ -86,7 +92,7 @@ struct MaxPoolNodeInfo
 
 /// Neural Net struct
 using SVFNeuralNet =
-    std::variant<ConstantNodeInfo, BasicNodeInfo, FullyconnectedInfo, ConvNodeInfo, ReluNodeInfo, MaxPoolNodeInfo>;
+    std::variant<ConstantNodeInfo, BasicNodeInfo, FullyconnectedInfo, ConvNodeInfo, ReluNodeInfo, MaxPoolNodeInfo, FlattenNodeInfo>;
 
 class SVFNN
 {

@@ -13,6 +13,10 @@ NeuronNode::NodeK ReLuNeuronNode::get_type() const{
     return ReLuNode;
 }
 
+NeuronNode::NodeK FlattenNeuronNode::get_type() const{
+    return FlattenNode;
+}
+
 /// filter
 u32_t FilterSubNode::get_depth() const{
     return value.size();
@@ -142,42 +146,49 @@ void NeuronNode::dump() const{
 const std::string ReLuNeuronNode::toString() const{
     std::string str;
     std::stringstream rawstr(str);
-    rawstr <<ReLuNeuronNode::get_type() << "NNNode" << getId();
+    rawstr <<ReLuNeuronNode::get_type() << "ReluNode" << getId();
+    return rawstr.str();
+}
+
+const std::string FlattenNeuronNode::toString() const{
+    std::string str;
+    std::stringstream rawstr(str);
+    rawstr <<FlattenNeuronNode::get_type() << "FlattenNode" << getId();
     return rawstr.str();
 }
 
 const std::string BasicOPNeuronNode::toString() const{
     std::string str;
     std::stringstream rawstr(str);
-    rawstr << BasicOPNeuronNode::get_type() <<BasicOPNeuronNode::get_type() << "NNNode" << getId();
+    rawstr << BasicOPNeuronNode::get_type() <<BasicOPNeuronNode::get_type() << "BasicNode" << getId();
     return rawstr.str();
 }
 
 const std::string MaxPoolNeuronNode::toString() const{
     std::string str;
     std::stringstream rawstr(str);
-    rawstr << MaxPoolNeuronNode::get_type() << "NNNode" << getId();
+    rawstr << MaxPoolNeuronNode::get_type() << "MaxPoolingNode" << getId();
     return rawstr.str();
 }
 
 const std::string FullyConNeuronNode::toString() const{
     std::string str;
     std::stringstream rawstr(str);
-    rawstr << FullyConNeuronNode::get_type() << "NNNode" << getId();
+    rawstr << FullyConNeuronNode::get_type() << "FullyConnectedNode" << getId();
     return rawstr.str();
 }
 
 const std::string ConvNeuronNode::toString() const{
     std::string str;
     std::stringstream rawstr(str);
-    rawstr << ConvNeuronNode::get_type() << "NNNode" << getId();
+    rawstr << ConvNeuronNode::get_type() << "ConvNode" << getId();
     return rawstr.str();
 }
 
 const std::string ConstantNeuronNode::toString() const{
     std::string str;
     std::stringstream rawstr(str);
-    rawstr << ConstantNeuronNode::get_type() << "NNNode" << getId();
+    rawstr << ConstantNeuronNode::get_type() << "ConstantNode" << getId();
     return rawstr.str();
 }
 
@@ -297,6 +308,9 @@ template <> struct DOTGraphTraits<NeuronNet*> : public DOTGraphTraits<SVFIR*>
         else if (SVFUtil::isa<ConstantNeuronNode>(node))
         {
             rawstr << "color=purple";
+        }else if (SVFUtil::isa<FlattenNeuronNode>(node))
+        {
+            rawstr << "color=gray";
         }
         else
             assert(false && "no such kind of node!!");
@@ -359,9 +373,12 @@ NeuronNodeVariant GraphTraversal::convertToVariant(NeuronNode* node) {
         return convNode;
     } else if (auto* reLuNode = SVFUtil::dyn_cast<ReLuNeuronNode>(node)) {
         return reLuNode;
-    } else if (auto* maxPoolNode = SVFUtil::dyn_cast<MaxPoolNeuronNode>(node)) {
-        return maxPoolNode;
+    } else if(auto* flattenNode = SVFUtil::dyn_cast<FlattenNeuronNode>(node)){
+        return flattenNode;
+    }else if (auto* maxPoolNode = SVFUtil::dyn_cast<MaxPoolNeuronNode>(node)) {
+            return maxPoolNode;
     }
+
     ///  If the node does not match any known type, it can return std:: monostate or throw an exception
     return std::monostate{};
 }
@@ -467,6 +484,10 @@ void GraphTraversal::DFS(std::set<const NeuronNode *> &visited, std::vector<cons
                     solver.setIRMatrix(IRRes);
                     newIRRes = solver.ConstantNeuronNodeevaluate();
                     std::cout<<"FINISH Constant"<<std::endl;
+                } else if (neighbor->get_type() == 10){
+                    solver.setIRMatrix(IRRes);
+                    newIRRes = solver.FlattenNeuronNodeevaluate();
+                    std::cout<<"FINISH Flatten"<<std::endl;
                 }
                 /// Push neighbor and new IRRes into the stack
                 IRRes = newIRRes;
@@ -566,6 +587,10 @@ void GraphTraversal::IntervalDFS(std::set<const NeuronNode *> &visited, std::vec
                     solver.setIRMatrix(IRRes);
                     newIRRes = solver.ConstantNeuronNodeevaluate();
                     std::cout<<"FINISH Constant, The Result size: ("<<newIRRes.size()<<", "<<newIRRes[0].rows()<<", "<<newIRRes[0].cols()<<")"<<std::endl;
+                }else if (neighbor->get_type() == 10) {
+                    solver.setIRMatrix(IRRes);
+                    newIRRes = solver.FlattenNeuronNodeevaluate();
+                    std::cout<<"FINISH Flatten, The Result size: ("<<newIRRes.size()<<", "<<newIRRes[0].rows()<<", "<<newIRRes[0].cols()<<")"<<std::endl;
                 }
                 /// Push neighbor and new IRRes into the stack
                 IRRes = newIRRes;

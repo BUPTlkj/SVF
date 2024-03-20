@@ -1,5 +1,4 @@
 
-
 #ifndef SVF_SOLVER_H
 #define SVF_SOLVER_H
 
@@ -23,6 +22,8 @@ public:
     }
 
     Matrices ReLuNeuronNodeevaluate() const;
+
+    Matrices FlattenNeuronNodeevaluate() const;
 
     Matrices BasicOPNeuronNodeevaluate(
         const BasicOPNeuronNode* basic) const;

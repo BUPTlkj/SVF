@@ -36,6 +36,8 @@ public:
 
     IntervalMatrices ReLuNeuronNodeevaluate() const;
 
+    IntervalMatrices FlattenNeuronNodeevaluate() const;
+
     IntervalMatrices BasicOPNeuronNodeevaluate(
         const BasicOPNeuronNode* basic);
 
