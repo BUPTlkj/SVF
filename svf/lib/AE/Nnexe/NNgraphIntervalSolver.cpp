@@ -269,7 +269,7 @@ IntervalMatrices NNgraphIntervalSolver::MaxPoolNeuronNodeevaluate( const MaxPool
                 outMatrixL(i, j) = maxValL;
             }
         }
-        /// IntervalMat£¬(outMatrixU, outMatrixL)
+        /// IntervalMat, (outMatrixU, outMatrixL)
         IntervalMat intervalMatrix(outHeight, outWidth);
 
         for (u32_t i = 0; i < outHeight; ++i) {

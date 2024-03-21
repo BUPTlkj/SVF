@@ -51,7 +51,7 @@ def onnxshape_to_intlist(onnxshape):
 
 	# NCHW & NHWC
 	# convert NCHW to NHWC
-	# N: batch size; C, the number of feature maps, Channels. H:height，W: weight.
+	# N: batch size; C, the number of feature maps, Channels. H:height, W: weight.
 	if len(result) == 4:
 		return [result[0], result[2], result[3], result[1]]
 
@@ -162,7 +162,7 @@ def prepare_model(model):
 
 		# The following is the type attribute used for the current node
 
-		# flatten，pull it into a one-dimensional vector
+		# flatten, pull it into a one-dimensional vector
 		if node.op_type == "Flatten":
 			# The shape_map of the output matrix is as follows, with the output node as the search name,
 			# and the dimension of the output one-dimensional matrix is [1, the product of HWC]

@@ -1,7 +1,8 @@
 #include "SVFONNX.h"
 #include "AE/Nnexe/NNgraphIntervalSolver.h"
 #include <algorithm> /// For std::remove
-/// Parse function to extract integers from a given string and return their
+#include <filesystem>
+// Parse function to extract integers from a given string and return their
 /// vectors
 
 #if defined(_WIN32)
@@ -640,10 +641,6 @@ std::vector<double> SVFNN::parse_Convbiasvector(std::string s) {
 }
 
 
-int main(){
-
-
-}
 
 
 

@@ -704,7 +704,7 @@ int main(int argc, char** argv)
                 }
                 std::cout<<"****************"<<std::endl;
             }
-            nngraph.IntervalTraversal(in_x.front().second);
+            nngraph.IntervalTraversal(in_x[i].second);
         }
 
         //

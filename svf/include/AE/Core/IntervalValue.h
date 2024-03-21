@@ -671,7 +671,7 @@ inline IntervalValue operator>(const IntervalValue &lhs, const IntervalValue &rh
             }
             // Return [0,0] means lhs is totally impossible to be greater than rhs
             // i.e., lhs is totally less than or equal to rhs
-            // When lhs.ub <= rhs.lb, e.g., lhs:[3, 4] rhs:[4，5]
+            // When lhs.ub <= rhs.lb, e.g., lhs:[3, 4] rhs:[4, 5]
             // lhs.ub(4) <= rhs.lb(4)
             else if (lhs.ub().leq(rhs.lb()))
             {
