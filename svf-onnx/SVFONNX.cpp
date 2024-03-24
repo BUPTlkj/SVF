@@ -1,7 +1,8 @@
 #include "SVFONNX.h"
 #include "AE/Nnexe/NNgraphIntervalSolver.h"
-#include <algorithm> /// For std::remove
-#include <filesystem>
+#include "algorithm" /// For std::remove
+#include "filesystem"
+#include "Util/Options.h"
 // Parse function to extract integers from a given string and return their
 /// vectors
 
@@ -65,7 +66,7 @@ SVFNN::SVFNN(std::string adress): onnxAdress{adress}{
         /// Key: pair.first  Value: pair.second
         std::string name = pair.first;
         auto nodeDataParts = parseNodeData(pair.second);
-        for (size_t i = 0; i < nodeDataParts.size(); ++i) {
+        for (u32_t i = 0; i < nodeDataParts.size(); ++i) {
             if (i == 3) {
                 if (name.find(SepcialInfo) != std::string::npos) {
                     /// Modify the previous structure
@@ -90,7 +91,7 @@ SVFNN::SVFNN(std::string adress): onnxAdress{adress}{
         std::string name = pair.first;
         auto nodeDataParts = parseNodeData(pair.second);
 
-        for(size_t i=0; i<nodeDataParts.size(); ++i){
+        for(u32_t i=0; i<nodeDataParts.size(); ++i){
 
             if(i==3){ /// The third one is specific dimensions and data
                 if (name.find(Constant) != std::string::npos){
@@ -250,27 +251,27 @@ IntervalMat SVFNN::convertVectorXdToIntervalVector(const Vector& vec) {
 
     return intervalMat;
 }
-
-std::pair<Matrices, Matrices> SVFNN::splitIntervalMatrices(const IntervalMatrices & intervalMatrices) {
-    Matrices lowerBounds, upperBounds;
-
-    for (const auto& intervalMatrix : intervalMatrices) {
-        Mat lower(intervalMatrix.rows(), intervalMatrix.cols());
-        Mat upper(intervalMatrix.rows(), intervalMatrix.cols());
-
-        for (u32_t i = 0; i < intervalMatrix.rows(); ++i) {
-            for (u32_t j = 0; j < intervalMatrix.cols(); ++j) {
-                lower(i, j) = intervalMatrix(i, j).lb().getNumeral();
-                upper(i, j) = intervalMatrix(i, j).ub().getNumeral();
-            }
-        }
-
-        lowerBounds.push_back(lower);
-        upperBounds.push_back(upper);
-    }
-
-    return {lowerBounds, upperBounds};
-}
+//
+//std::pair<Matrices, Matrices> SVFNN::splitIntervalMatrices(const IntervalMatrices & intervalMatrices) {
+//    Matrices lowerBounds, upperBounds;
+//
+//    for (const auto& intervalMatrix : intervalMatrices) {
+//        Mat lower(intervalMatrix.rows(), intervalMatrix.cols());
+//        Mat upper(intervalMatrix.rows(), intervalMatrix.cols());
+//
+//        for (u32_t i = 0; i < intervalMatrix.rows(); ++i) {
+//            for (u32_t j = 0; j < intervalMatrix.cols(); ++j) {
+//                lower(i, j) = intervalMatrix(i, j).lb().getNumeral();
+//                upper(i, j) = intervalMatrix(i, j).ub().getNumeral();
+//            }
+//        }
+//
+//        lowerBounds.push_back(lower);
+//        upperBounds.push_back(upper);
+//    }
+//
+//    return {lowerBounds, upperBounds};
+//}
 
 std::string SVFNN::PyObjectToString(PyObject *pObj) {
     PyObject* pRepr = PyObject_Repr(pObj);  /// Get the printable representation of an object
@@ -313,7 +314,7 @@ std::map<std::string, std::string> SVFNN::callPythonFunction(const std::string& 
         pathstring = std::string(path);
     #elif defined(__linux__)
         char path[PATH_MAX];
-        ssize_t count = readlink("/proc/self/exe", path, PATH_MAX);
+        readlink("/proc/self/exe", path, PATH_MAX);
         pathstring = std::string(path);
     #elif defined(__APPLE__)
         char path[1024];
@@ -332,6 +333,7 @@ std::map<std::string, std::string> SVFNN::callPythonFunction(const std::string& 
     std::filesystem::path exePath(pathstring);
     std::filesystem::path SVFPath = exePath.parent_path().parent_path().parent_path();
     std::string sub_path = "/svf-onnx";
+
     std::string pyscriptpath = std::string(SVFPath) + sub_path;
     std::string command = "sys.path.append('" + pyscriptpath + "')";
     PyRun_SimpleString(command.c_str());

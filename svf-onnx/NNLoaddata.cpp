@@ -9,10 +9,10 @@ std::pair<LabelVector, MatrixVector_3c> LoadData::read_dataset(){
     LabelVector labels;
     MatrixVector_3c matrixes_3c;
 
-    if(dataset == "mnist"){
+    if(dataset.find("mnist") != std::string::npos){
         std::string line;
         /// THIS PATH!!! ATTENTION
-        std::ifstream file_mnist("/Users/liukaijie/CLionProjects/TestforAI/dataset/mnist_test.csv");
+        std::ifstream file_mnist(dataset);
 
         if(!file_mnist.is_open()){
             std::cerr << "Error opening file" << std::endl;
@@ -57,10 +57,10 @@ std::pair<LabelVector, MatrixVector_3c> LoadData::read_dataset(){
 
         file_mnist.close();
 
-    }else{
+    }else if (dataset.find("cifar") != std::string::npos){
         std::string line;
         /// THIS PATH!!!!
-        std::ifstream file_cifar("/Users/liukaijie/CLionProjects/TestforAI/dataset/cifar10_test.csv");
+        std::ifstream file_cifar("dataset");
 
         if(!file_cifar.is_open()){
             std::cerr << "Error opening file" << std::endl;
@@ -140,7 +140,7 @@ std::vector<std::pair<u32_t , IntervalMatrices>> LoadData::convertLabelAndBounds
         /// ensure each LabelAndBounds: matrix_lb & matrix_ub have the same size
         assert(labelAndBounds.matrix_lb.size() == labelAndBounds.matrix_ub.size());
 
-        /// Traversal matrix_lb & matrix_ub£¬create an pad IntervalMat
+        /// Traversal matrix_lb & matrix_ubï¿½ï¿½create an pad IntervalMat
         for (u32_t i = 0; i < labelAndBounds.matrix_lb.size(); ++i) {
             const Mat& lb = labelAndBounds.matrix_lb[i];
             const Mat& ub = labelAndBounds.matrix_ub[i];

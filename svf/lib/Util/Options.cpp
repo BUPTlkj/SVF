@@ -861,4 +861,17 @@ const Option<u32_t> Options::AEPrecision(
     0
 );
 
+const Option<std::string> Options::NNName(
+    "nnname",
+    "neuron network file name",
+    ""
+);
+
+const Option<std::string> Options::DataSetPath(
+    "datapath",
+    "input dataset path",
+    ""
+);
+
+
 } // namespace SVF.

@@ -277,6 +277,9 @@ public:
 
     // float precision for symbolic abstraction
     static const Option<u32_t> AEPrecision;
+    static const Option<std::string> NNName;
+    static const Option<std::string> DataSetPath;
+
 };
 }  // namespace SVF
 

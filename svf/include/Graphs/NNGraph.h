@@ -4,7 +4,7 @@
 #include "AE/Nnexe/NNgraphIntervalSolver.h"
 #include "NNEdge.h"
 #include "NNNode.h"
-#include <memory>
+#include "memory"
 
 /// using SVF namespace graph strcture
 namespace SVF {

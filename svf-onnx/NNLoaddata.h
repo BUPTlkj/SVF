@@ -6,8 +6,8 @@
 #include "Eigen/Dense"
 #include "Graphs/NNNode.h"
 #include "iostream"
-#include <fstream>
-#include <sstream>
+#include "fstream"
+#include "sstream"
 
 namespace SVF
 {
@@ -34,7 +34,7 @@ public:
 
 public:
     LoadData(std::string name, u32_t num) : dataset{name}, data_num(num){
-        if (dataset == "mnist" or dataset == "cifar"){
+        if (dataset.find("mnist") != std::string::npos or dataset.find("cifar") != std::string::npos){
             std::cout << "Loading " << dataset << " ......" << std::endl;
         }else{
             std::cout<<"UNSUPPORT DATASET, ONLY SUPPORT MNIST AND CIFAR 10"<<std::endl;
@@ -50,7 +50,6 @@ public:
     std::vector<std::pair<u32_t , IntervalMatrices>> convertLabelAndBoundsToIntervalMatrices(const std::vector<LabelAndBounds>& labelAndBoundsVec);
     };
 }
-
 
 
 #endif // SVF_NNLOADDATA_H
