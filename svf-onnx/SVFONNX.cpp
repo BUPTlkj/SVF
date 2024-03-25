@@ -388,6 +388,8 @@ FullyconnectedInfo SVFNN::GEMMparseAndFormat(const std::string& input) {
     std::smatch match;
     std::string str = input;
 
+    std::cout<<"**"<<str;
+
     while (std::regex_search(str, match, re)) {
         std::string name = match[1];
 
