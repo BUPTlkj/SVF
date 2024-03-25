@@ -133,7 +133,7 @@ find_package(Python 3.11 EXACT COMPONENTS Interpreter Development REQUIRED)
 #find_package(Python 3 COMPONENTS Interpreter Development)
 #
 #if(Python_FOUND AND Python_VERSION VERSION_GREATER "3.12")
-#  message(FATAL_ERROR "Python version is greater than 3.11, but a version less than or equal to 3.11 is required.")
+#  message(FATAL_ERROR "Python version is greater than 3.12, but a version less than 3.12 is required.")
 #endif()
 
 # Add the Z3 include directory and link the Z3 library to all targets of SVF

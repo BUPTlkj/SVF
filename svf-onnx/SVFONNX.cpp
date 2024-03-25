@@ -3,17 +3,12 @@
 #include "algorithm" /// For std::remove
 #include "filesystem"
 #include "Util/Options.h"
+#include <filesystem>
+namespace fs = std::filesystem;
+#define CUR_DIR() (fs::path(__FILE__).parent_path())
+
 // Parse function to extract integers from a given string and return their
 /// vectors
-
-#if defined(_WIN32)
-#include <windows.h>
-#elif defined(__linux__)
-#include <unistd.h>
-#include <limits.h>
-#elif defined(__APPLE__)
-#include <mach-o/dyld.h>
-#endif
 
 using namespace SVF;
 
@@ -186,7 +181,7 @@ std::map<std::string, std::pair<std::pair<u32_t, u32_t>, std::pair<u32_t, u32_t>
         if (key_value.first.find("Conv") != std::string::npos) {
             /// if value's format is correct
             u32_t px, py, px_, py_, sx, sy;
-            sscanf(key_value.second.c_str(), " ['pads:', [%d, %d, %d, %d], 'strides:', [%d, %d]]", &px, &py, &px_, &py_, &sx, &sy); // ½âÎö×Ö·û´®ÎªÁ½¸öÕûÊý
+            sscanf(key_value.second.c_str(), " ['pads:', [%d, %d, %d, %d], 'strides:', [%d, %d]]", &px, &py, &px_, &py_, &sx, &sy); // ï¿½ï¿½ï¿½ï¿½ï¿½Ö·ï¿½ï¿½ï¿½Îªï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
             result[key_value.first] = std::make_pair(std::make_pair(px, py), std::make_pair(sx, sy));
         }
     }
@@ -201,7 +196,7 @@ SVFNN::parseMaxPoolItems(const std::vector<std::string> &items) {
         if (key_value.first.find("MaxPool") != std::string::npos) {
             /// if value's format is correct
             u32_t wx, wy, px, py, px_, py_, sx, sy;
-            sscanf(key_value.second.c_str(), " ['Windows:', [%d, %d], 'pads:', [%d, %d, %d, %d], 'strides:', [%d, %d]]", &wx, &wy, &px, &py,  &px_, &py_, &sx, &sy); // ½âÎö×Ö·û´®ÎªËÄ¸öÕûÊý
+            sscanf(key_value.second.c_str(), " ['Windows:', [%d, %d], 'pads:', [%d, %d, %d, %d], 'strides:', [%d, %d]]", &wx, &wy, &px, &py,  &px_, &py_, &sx, &sy); // ï¿½ï¿½ï¿½ï¿½ï¿½Ö·ï¿½ï¿½ï¿½Îªï¿½Ä¸ï¿½ï¿½ï¿½ï¿½ï¿½
             result[key_value.first] = std::make_pair(std::make_pair(wx, wy), std::make_pair(std::make_pair(px, py), std::make_pair(sx, sy)));
         }
     }
@@ -251,27 +246,6 @@ IntervalMat SVFNN::convertVectorXdToIntervalVector(const Vector& vec) {
 
     return intervalMat;
 }
-//
-//std::pair<Matrices, Matrices> SVFNN::splitIntervalMatrices(const IntervalMatrices & intervalMatrices) {
-//    Matrices lowerBounds, upperBounds;
-//
-//    for (const auto& intervalMatrix : intervalMatrices) {
-//        Mat lower(intervalMatrix.rows(), intervalMatrix.cols());
-//        Mat upper(intervalMatrix.rows(), intervalMatrix.cols());
-//
-//        for (u32_t i = 0; i < intervalMatrix.rows(); ++i) {
-//            for (u32_t j = 0; j < intervalMatrix.cols(); ++j) {
-//                lower(i, j) = intervalMatrix(i, j).lb().getNumeral();
-//                upper(i, j) = intervalMatrix(i, j).ub().getNumeral();
-//            }
-//        }
-//
-//        lowerBounds.push_back(lower);
-//        upperBounds.push_back(upper);
-//    }
-//
-//    return {lowerBounds, upperBounds};
-//}
 
 std::string SVFNN::PyObjectToString(PyObject *pObj) {
     PyObject* pRepr = PyObject_Repr(pObj);  /// Get the printable representation of an object
@@ -308,33 +282,9 @@ std::map<std::string, std::string> SVFNN::callPythonFunction(const std::string& 
     std::map<std::string, std::string> cppMap;
     std::string pathstring;
 
-    #if defined(_WIN32)
-        char path[MAX_PATH] = { 0 };
-        GetModuleFileNameA(NULL, path, MAX_PATH);
-        pathstring = std::string(path);
-    #elif defined(__linux__)
-        char path[PATH_MAX];
-        readlink("/proc/self/exe", path, PATH_MAX);
-        pathstring = std::string(path);
-    #elif defined(__APPLE__)
-        char path[1024];
-        uint32_t size = sizeof(path);
-        if (_NSGetExecutablePath(path, &size) == 0)
-            pathstring = std::string(path);
-        else
-            pathstring = std::string();
-    #else
-        #error "Unsupported platform!"
-    pathstring = std::string();
-    #endif
-
     PyRun_SimpleString("import sys");
 
-    std::filesystem::path exePath(pathstring);
-    std::filesystem::path SVFPath = exePath.parent_path().parent_path().parent_path();
-    std::string sub_path = "/svf-onnx";
-
-    std::string pyscriptpath = std::string(SVFPath) + sub_path;
+    std::string pyscriptpath = CUR_DIR();
     std::string command = "sys.path.append('" + pyscriptpath + "')";
     PyRun_SimpleString(command.c_str());
 
