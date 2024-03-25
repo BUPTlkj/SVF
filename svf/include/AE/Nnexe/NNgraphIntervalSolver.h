@@ -26,7 +26,7 @@ public:
     }
 
     /// TEST
-    void initializeMatrix();
+    void Test_1();
 
     std::pair<Matrices, Matrices> splitIntervalMatrices(const IntervalMatrices & intervalMatrices);
 

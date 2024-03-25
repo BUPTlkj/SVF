@@ -11,49 +11,48 @@ bool isInt(T&& var) {
     return std::is_same<typename std::remove_cv<typename std::remove_reference<T>::type>::type, u32_t>::value;
 }
 
-//typedef Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic> myMatrixXd;
-void NNgraphIntervalSolver::initializeMatrix() {
+void NNgraphIntervalSolver::Test_1() {
 
-//    typedef Eigen::Matrix<IntervalValue, Eigen::Dynamic, Eigen::Dynamic> myMatrixXd;
-//    u32_t a = 2;
-//    u32_t b = 3;
-//    // u32_t c = 2;
-//
-//    IntervalValue inv(0,1);
-//    IntervalValue inv2 = inv + inv;
-//    std::cout << "INV:\n" << inv << std::endl;
-//    std::cout << "INV2:\n" << inv2 << std::endl;
-//
-//    // [a,b] * [c,c] works fine
-//    // Eigen::Matrix<IntervalValue, 2, 2> matrix;
-//    // Eigen::Matrix<IntervalValue, a, a> matrix;
-//    myMatrixXd matrix(a,b);
-//    matrix(0,0) = IntervalValue(2,2);
-//    matrix(0,1) = IntervalValue(1,1);
-//    matrix(0,2) = IntervalValue(0,0);
-//    matrix(1,0) = IntervalValue(0,0);
-//    matrix(1,1) = IntervalValue(2,2);
-//    matrix(1,2) = IntervalValue(0,0);
-//
-//
-//    // Eigen::Matrix<IntervalValue, 2, 2> rhs;
-//    myMatrixXd rhs(b,a);
-//    rhs(0,0) = inv;
-//    rhs(0,1) = inv + inv;
-//    rhs(1,0) = inv ;
-//    rhs(1,1) = inv;
-//    rhs(2,0) = inv ;
-//    rhs(2,1) = inv;
-//
-//    myMatrixXd output = matrix * rhs;
-//
-//    std::cout << "Matrix 107:\n" << output(0,0) << std::endl;
-//    for (u32_t i = 0; i < output.rows(); ++i) {
-//        for (u32_t j = 0; j < output.cols(); ++j) {
-//            std::cout << output(i, j) << " ";
-//        }
-//        std::cout << std::endl;
-//    }
+    typedef Eigen::Matrix<IntervalValue, Eigen::Dynamic, Eigen::Dynamic> myMatrixXd;
+    u32_t a = 2;
+    u32_t b = 3;
+    // u32_t c = 2;
+
+    IntervalValue inv(0,1);
+    IntervalValue inv2 = inv + inv;
+    std::cout << "INV:\n" << inv << std::endl;
+    std::cout << "INV2:\n" << inv2 << std::endl;
+
+    // [a,b] * [c,c] works fine
+    // Eigen::Matrix<IntervalValue, 2, 2> matrix;
+    // Eigen::Matrix<IntervalValue, a, a> matrix;
+    myMatrixXd matrix(a,b);
+    matrix(0,0) = IntervalValue(2,2);
+    matrix(0,1) = IntervalValue(1,1);
+    matrix(0,2) = IntervalValue(0,0);
+    matrix(1,0) = IntervalValue(0,0);
+    matrix(1,1) = IntervalValue(2,2);
+    matrix(1,2) = IntervalValue(0,0);
+
+
+    // Eigen::Matrix<IntervalValue, 2, 2> rhs;
+    myMatrixXd rhs(b,a);
+    rhs(0,0) = inv;
+    rhs(0,1) = inv + inv;
+    rhs(1,0) = inv ;
+    rhs(1,1) = inv;
+    rhs(2,0) = inv ;
+    rhs(2,1) = inv;
+
+    myMatrixXd output = matrix * rhs;
+
+    std::cout << "Matrix 107:\n" << output(0,0) << std::endl;
+    for (u32_t i = 0; i < output.rows(); ++i) {
+        for (u32_t j = 0; j < output.cols(); ++j) {
+            std::cout << output(i, j) << " ";
+        }
+        std::cout << std::endl;
+    }
 
     /// Define ab
     Eigen::Matrix<IntervalValue, Eigen::Dynamic, Eigen::Dynamic> matrixq(2, 2);

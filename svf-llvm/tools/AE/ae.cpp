@@ -632,7 +632,6 @@ public:
     }
 };
 
-
 int main(int argc, char** argv)
 {
     int arg_num = 0;
