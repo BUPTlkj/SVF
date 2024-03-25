@@ -25,6 +25,9 @@
  //
  // Author: Jiawei Wang, Xiao Cheng, Jiawei Yang, Jiawei Ren, Yulei Sui
  */
+
+
+
 #include "SVF-LLVM/SVFIRBuilder.h"
 #include "WPA/WPAPass.h"
 #include "Util/CommandLine.h"
@@ -36,6 +39,9 @@
 #include "AE/Core/RelExeState.h"
 #include "AE/Core/RelationSolver.h"
 
+#include "svf-onnx/NNLoaddata.h"
+#include "SVF-LLVM/NNgraphBuilder.h"
+
 using namespace SVF;
 using namespace SVFUtil;
 
@@ -44,6 +50,12 @@ static Option<bool> SYMABS(
     "symabs",
     "symbolic abstraction test",
     false
+);
+
+static Option<bool> INNGT(
+    "intervalnn",
+    "interval nngraph test",
+    true
 );
 
 class SymblicAbstractionTest
@@ -620,7 +632,6 @@ public:
     }
 };
 
-
 int main(int argc, char** argv)
 {
     int arg_num = 0;
@@ -645,6 +656,62 @@ int main(int argc, char** argv)
     {
         SymblicAbstractionTest saTest;
         saTest.testsValidation();
+        return 0;
+    }else if(INNGT()){
+
+        /// ONNX address
+        outs()<<Options::NNName();
+        const std::string address = Options::NNName();
+
+        /// DataSet address
+        outs()<<Options::DataSetPath();
+        const std::string datapath = Options::DataSetPath();
+
+        /// parse onnx into svf-onnx
+        SVFNN svfnn(address);
+        auto nodes = svfnn.get_nodes();
+
+        /// Init nn-graph builder
+        NNGraphBuilder nngraph;
+
+        /// Init & Add node
+        for (const auto& node : nodes) {
+            std::visit(nngraph, node);
+        }
+
+        /// Init & Add Edge
+        nngraph.AddEdges();
+
+        /// Load dataset: mnist or cifa-10, number of dataset
+        LoadData dataset(datapath, 1);
+        /// Input pixel matrix
+        std::pair<LabelVector, MatrixVector_3c> x = dataset.read_dataset();
+        std::cout<<"Label: "<<x.first.front()<<std::endl;
+
+        double perti = 0.001;
+        std::vector<LabelAndBounds> per_x = dataset.perturbateImages(x, perti);
+
+        /// Run abstract interpretation on NNgraph
+//            nngraph.Traversal(x.second.front());
+
+        /// Run abstract interpretation on NNgraph Interval
+        std::vector<std::pair<u32_t, IntervalMatrices>> in_x = dataset.convertLabelAndBoundsToIntervalMatrices(per_x) ;
+        for(u32_t i = 0; i < in_x.size(); i++){
+            std::cout<<in_x[i].first<<std::endl;
+            for(const auto&intervalMat: in_x[i].second){
+                std::cout << "IntervalMatrix :\n";
+                std::cout << "Rows: " << intervalMat.rows() << ", Columns: " << intervalMat.cols() << "\n";
+                for (u32_t k = 0; k < intervalMat.rows(); ++k) {
+                    for (u32_t j = 0; j < intervalMat.cols(); ++j) {
+                        std::cout<< "[ "<< intervalMat(k, j).lb().getRealNumeral()<<", "<< intervalMat(k, j).ub().getRealNumeral() <<" ]"<< "\t";
+                    }
+                    std::cout << std::endl;
+                }
+                std::cout<<"****************"<<std::endl;
+            }
+            nngraph.IntervalTraversal(in_x[i].second);
+        }
+
         return 0;
     }
 

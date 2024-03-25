@@ -1,4 +1,5 @@
 # Find the LLVM instance to use for building SvfLLVM
+
 find_package(LLVM REQUIRED CONFIG HINTS ${LLVM_DIR} $ENV{LLVM_DIR})
 message(STATUS "LLVM STATUS:
   Version       ${LLVM_VERSION}
@@ -67,10 +68,13 @@ include(AddLLVM)
 add_llvm_library(SvfLLVM ${SVFLLVM_SOURCES})
 
 # Add the public headers as an include directory
+message("SVFLLVM Python INCLUDE DIR: ${Python_INCLUDE_DIRS}")
 target_include_directories(SvfLLVM
   PUBLIC
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
     $<INSTALL_INTERFACE:${SVF_INSTALL_INCLUDE_DIR}>
+        ${Python_INCLUDE_DIRS}
+        ${CMAKE_CURRENT_SOURCE_DIR}/../
 )
 
 set_target_properties(SvfLLVM PROPERTIES
@@ -80,7 +84,7 @@ set_target_properties(SvfLLVM PROPERTIES
 )
 
 # Link LLVM's libraries to SvfLLVM, as well as the SVF core library
-target_link_libraries(SvfLLVM PUBLIC ${llvm_libs} SvfCore)
+target_link_libraries(SvfLLVM PUBLIC ${llvm_libs} SvfCore ${Python_LIBRARIES})
 
 # Get the source files (i.e. all *.c/*.cpp files) for SVF's subprojects and add them to SvfLLVM
 file(GLOB_RECURSE SVF_LLVM_SOURCES lib/*.cpp)

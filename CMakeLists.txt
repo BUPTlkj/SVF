@@ -128,13 +128,25 @@ message(STATUS "Z3 STATUS:
   Z3 library file:        ${Z3_LIBRARIES}
   Z3 include directory:   ${Z3_INCLUDES}")
 
+#find_package(Python 3.11 EXACT COMPONENTS Interpreter Development REQUIRED)
+
+find_package(Python 3 COMPONENTS Interpreter Development)
+
+if(Python_FOUND AND Python_VERSION VERSION_GREATER "3.12")
+  message(FATAL_ERROR "Python version is greater than 3.12, but a version less than 3.12 is required.")
+endif()
+
 # Add the Z3 include directory and link the Z3 library to all targets of SVF
 link_libraries(${Z3_LIBRARIES})
 include_directories(SYSTEM ${Z3_INCLUDES})
 
+set(EIGEN_HOME ${CMAKE_SOURCE_DIR}/ext_include)
+include_directories(${EIGEN_HOME})
+
 # Add the actual SVF and SVF-LLVM targets
 add_subdirectory(svf)
 add_subdirectory(svf-llvm)
+add_subdirectory(svf-onnx)
 
 # Whether RTTI/Exceptions are enabled currently depends on whether the LLVM instance used to build
 # SVF had them enabled; since the LLVM instance is found in the "svf-llvm" subdirectory, it sets the

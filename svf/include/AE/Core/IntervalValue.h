@@ -525,6 +525,15 @@ inline IntervalValue operator+(const IntervalValue &lhs,
     }
 }
 
+
+/// Add IntervalValues
+//inline IntervalValue& operator+=(const IntervalValue &rhs)
+//{
+//
+////    return *this;
+//}
+
+
 /// Subtract IntervalValues
 inline IntervalValue operator-(const IntervalValue &lhs,
                                const IntervalValue &rhs)
@@ -662,7 +671,7 @@ inline IntervalValue operator>(const IntervalValue &lhs, const IntervalValue &rh
             }
             // Return [0,0] means lhs is totally impossible to be greater than rhs
             // i.e., lhs is totally less than or equal to rhs
-            // When lhs.ub <= rhs.lb, e.g., lhs:[3, 4] rhs:[4，5]
+            // When lhs.ub <= rhs.lb, e.g., lhs:[3, 4] rhs:[4, 5]
             // lhs.ub(4) <= rhs.lb(4)
             else if (lhs.ub().leq(rhs.lb()))
             {
@@ -974,6 +983,27 @@ inline IntervalValue operator^(const IntervalValue &lhs, const IntervalValue &rh
     }
 }
 
+
+inline IntervalValue operator+=(IntervalValue& lhs, const IntervalValue& rhs) {
+    lhs = lhs + rhs;
+    return lhs + rhs;
+}
+
+inline IntervalValue operator*=(IntervalValue& lhs, const IntervalValue& rhs) {
+    lhs = lhs * rhs;
+    return lhs;
+}
+
+inline IntervalValue operator-=(IntervalValue& lhs, const IntervalValue& rhs) {
+    lhs = lhs - rhs;
+    return lhs;
+}
+
+inline IntervalValue operator/=(IntervalValue& lhs, const IntervalValue& rhs) {
+    lhs = lhs / rhs;
+    return lhs;
+}
+
 /// Write an IntervalValue on a stream
 inline std::ostream &operator<<(std::ostream &o,
                                 const IntervalValue &IntervalValue)
@@ -981,6 +1011,8 @@ inline std::ostream &operator<<(std::ostream &o,
     IntervalValue.dump(o);
     return o;
 }
+
+
 
 } // end namespace SVF
 #endif //Z3_EXAMPLE_IntervalValue_H
