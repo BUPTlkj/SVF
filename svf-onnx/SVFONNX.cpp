@@ -3,6 +3,7 @@
 #include "algorithm" /// For std::remove
 #include "filesystem"
 #include "Util/Options.h"
+#include "fstream"
 #include <filesystem>
 namespace fs = std::filesystem;
 #define CUR_DIR() (fs::path(__FILE__).parent_path())
@@ -80,8 +81,8 @@ SVFNN::SVFNN(std::string adress): onnxAdress{adress}{
             }
         }
     }
-
     for(const auto& pair : cppMapa){
+
         /// Key: pair.first  Value: pair.second
         std::string name = pair.first;
         auto nodeDataParts = parseNodeData(pair.second);
@@ -383,42 +384,100 @@ std::string SVFNN::trim(const std::string& str, const std::string& chars) {
 /// Analyze and format weight and bias information
 FullyconnectedInfo SVFNN::GEMMparseAndFormat(const std::string& input) {
     FullyconnectedInfo params;
-    std::regex re("'(.*?)': \\[\\((.*?)\\), \\[(.*?)\\]\\]");
+    const char *pattern = "'(.*?)': \\[\\((.*?)\\), \\[(.*?)\\]\\]";
+    const char *error;
+    s32_t erroffset;
+    pcre *re;
+    s32_t ovector[30]; /// Output vector used to store matching positions
 
-    std::smatch match;
-    std::string str = input;
-
-    std::cout<<"**"<<str;
-
-    while (std::regex_search(str, match, re)) {
-        std::string name = match[1];
-
-        if(name.find("weight")!=std::string::npos){
-            params.weightName = name;
-            params.weightDimensions = trim(match[2], " ()");
-            params.weightValues = trim(match[3], " []");
-        }
-
-        if(name.find("bias")!=std::string::npos){
-            params.biasName = name;
-            params.biasDimensions = trim(match[2], " ()");
-            params.biasValues = trim(match[3], " []");
-        }
-
-        str = match.suffix().str(); /// Continue to search for the next match
+    /// Compile regular expressions
+    re = pcre_compile(pattern, PCRE_UTF8, &error, &erroffset, NULL);
+    if (re == NULL) {
+        std::cerr << "PCRE compilation failed at offset " << erroffset << ": " << error << std::endl;
+        return params;
     }
+
+    s32_t offset = 0;
+    s32_t input_length = input.length();
+    s32_t rc;
+    u32_t tag;
+
+    while ((rc = pcre_exec(re, NULL, input.c_str(), input_length, offset, 0, ovector, sizeof(ovector) / sizeof(ovector[0]))) >= 0) {
+
+        for (u32_t i = 1; i < rc; ++i) {
+            const char *match;
+            pcre_get_substring(input.c_str(), ovector, rc, i, &match);
+            std::string match_str(match);
+
+            switch (i) {
+            case 1: // Name
+                if (match_str.find("weight") != std::string::npos) {
+                    tag = 0;
+                    params.weightName = match_str;
+                } else if (match_str.find("bias") != std::string::npos) {
+                    tag = 1;
+                    params.biasName = match_str;
+                }
+                break;
+            case 2: // Dimensions
+                if (tag == 0) {
+                    params.weightDimensions = trim(match_str, " ()");
+                } else if (tag == 1) {
+                    //                        std::cout<<match_str<<std::endl;
+                    params.biasDimensions = trim(match_str, " ()");
+                }
+                break;
+            case 3: // Values
+                if (tag == 0) {
+                    params.weightValues = trim(match_str, " []");
+                } else if (tag == 1) {
+                    params.biasValues = trim(match_str, " []");
+                }
+                break;
+            }
+            pcre_free_substring(match);
+        }
+
+        /// update
+        offset = ovector[1];
+    }
+
+    // release the regular expressions
+    pcre_free(re);
 
     return params;
 }
 
-Mat SVFNN::restoreGEMMWeightToMatrix(const std::string& dimensions, const std::string& values) {
+Mat SVFNN::restoreGEMMWeightToMatrix(const std::string& dimensions, const std::string& rawValues) {
     /// Analyze dimensions
     std::istringstream dimStream(dimensions);
     u32_t rows, cols;
-    char comma; /// For skipping commas
+    char comma; // For skipping commas
     dimStream >> rows >> comma >> cols;
 
-    std::string processedValues = std::regex_replace(values, std::regex("\\], \\["), ", ");
+    // PCRE
+    const char *error;
+    s32_t erroffset;
+    pcre *re;
+    s32_t ovector[30];
+    std::string processedValues = rawValues;
+
+    // Compile regular expressions
+    re = pcre_compile("\\], \\[", PCRE_UTF8, &error, &erroffset, NULL);
+    if (re == NULL) {
+        std::cerr << "PCRE compilation failed at offset " << erroffset << ": " << error << std::endl;
+        return Mat(0, 0); // Empty Matrix
+    }
+
+    s32_t offset = 0;
+    s32_t rc;
+    while ((rc = pcre_exec(re, NULL, processedValues.c_str(), processedValues.length(), offset, 0, ovector, sizeof(ovector) / sizeof(ovector[0]))) >= 0) {
+        processedValues.replace(ovector[0], ovector[1] - ovector[0], ", ");
+        // Update search start&end position
+        offset = ovector[0] + 2; // ", ".length() == 2
+    }
+
+    pcre_free(re);
 
     /// Parsing Numeric Strings
     std::vector<double> vals;
@@ -431,12 +490,11 @@ Mat SVFNN::restoreGEMMWeightToMatrix(const std::string& dimensions, const std::s
     /// Confirm the number of values to match the size of the matrix
     if (vals.size() != rows * cols) {
         std::cerr << "Value count does not match matrix dimensions!" << std::endl;
-        return Mat(0, 0); /// Empty Matrix
+        return Mat(0, 0); // Empty Matrix
     }
 
     /// Padding matrix
     Mat matrix(rows, cols);
-
     for (u32_t i = 0; i < rows; ++i) {
         for (u32_t j = 0; j < cols; ++j) {
             matrix(i, j) = vals[i * cols + j];
@@ -445,6 +503,7 @@ Mat SVFNN::restoreGEMMWeightToMatrix(const std::string& dimensions, const std::s
 
     return matrix;
 }
+
 
 Vector SVFNN::restoreGEMMBiasMatrixFromStrings(const std::string& dimensionStr, const std::string& valuesStr) {
     /// Processing dimension strings, removing commas
@@ -484,32 +543,53 @@ Vector SVFNN::restoreGEMMBiasMatrixFromStrings(const std::string& dimensionStr, 
 
 ConvParams SVFNN::ConvparseAndFormat(const std::string& input) {
     ConvParams params;
-    std::regex re("'(.*?)': \\[\\((.*?)\\), \\[\\[\\[\\[(.*?)\\]\\]\\]\\]\\], '(.*?)': \\[\\((.*?)\\), \\[(.*?)\\]\\]");
+    const char* error;
+    int erroffset;
+    pcre* re = pcre_compile("'(.*?)': \\[\\((.*?)\\), \\[\\[\\[\\[(.*?)\\]\\]\\]\\]\\], '(.*?)': \\[\\((.*?)\\), \\[(.*?)\\]\\]",
+                            PCRE_MULTILINE, &error, &erroffset, NULL);
 
-    std::smatch match;
-    std::string str = input;
-
-    while (std::regex_search(str, match, re)) {
-        std::string name = match[1];
-        std::string name2 = match[4];
-
-        if(name.find("weight")!=std::string::npos){
-            params.filterName = name;
-            params.filterDims = match[2];
-            params.filterValue =  match[3];
-            params.filterValue =  "[[[[" + params.filterValue+ "]]]]";
-        }
-
-        if(name2.find("bias")!=std::string::npos){
-            params.biasName = name2;
-            params.biasDims = match[5];
-            params.biasValue = match[6];
-            params.biasValue = "[" + params.biasValue + "]";
-        }
-
-        str = match.suffix().str(); /// Continue to search for the next match
+    if (re == NULL) {
+        std::cerr << "PCRE compilation failed at offset " << erroffset << ": " << error << std::endl;
+        return params; // Return empty params on error
     }
 
+    int offsets[30]; // Output vector for substring information
+    int result = 0;
+    int startOffset = 0;
+    const char* subject = input.c_str();
+    while ((result = pcre_exec(re, NULL, subject, input.length(), startOffset, 0, offsets, sizeof(offsets)/sizeof(offsets[0]))) >= 0) {
+        // Extracting the matched substrings
+        const char* matchedStr;
+        for(int i = 1; i < result; i++) {
+            pcre_get_substring(subject, offsets, result, i, &(matchedStr));
+            std::string matchStr(matchedStr);
+
+            switch(i) {
+            case 1:
+                params.filterName = matchStr;
+                break;
+            case 2:
+                params.filterDims = matchStr;
+                break;
+            case 3:
+                params.filterValue = "[[[[" + matchStr + "]]]]";
+                break;
+            case 4:
+                params.biasName = matchStr;
+                break;
+            case 5:
+                params.biasDims = matchStr;
+                break;
+            case 6:
+                params.biasValue = "[" + matchStr + "]";
+                break;
+            }
+            pcre_free_substring(matchedStr);
+        }
+        startOffset = offsets[1]; // Move to the end of the last match
+    }
+
+    pcre_free(re); // Free the compiled pattern
     return params;
 }
 

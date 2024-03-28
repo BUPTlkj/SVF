@@ -10,6 +10,7 @@
 #include "map"
 #include "sstream"
 #include "string"
+#include "pcre.h"
 
 
 namespace SVF

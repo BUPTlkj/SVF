@@ -660,11 +660,11 @@ int main(int argc, char** argv)
     }else if(INNGT()){
 
         /// ONNX address
-//        outs()<<Options::NNName();
+        outs()<<Options::NNName()<<std::endl;
         const std::string address = Options::NNName();
 
         /// DataSet address
-//        outs()<<Options::DataSetPath();
+        outs()<<Options::DataSetPath()<<std::endl;
         const std::string datapath = Options::DataSetPath();
 
         /// parse onnx into svf-onnx
