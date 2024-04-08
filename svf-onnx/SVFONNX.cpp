@@ -400,11 +400,11 @@ FullyconnectedInfo SVFNN::GEMMparseAndFormat(const std::string& input) {
     s32_t offset = 0;
     s32_t input_length = input.length();
     s32_t rc;
-    u32_t tag;
+    s32_t tag = -1; /// init
 
     while ((rc = pcre_exec(re, NULL, input.c_str(), input_length, offset, 0, ovector, sizeof(ovector) / sizeof(ovector[0]))) >= 0) {
 
-        for (u32_t i = 1; i < rc; ++i) {
+        for (s32_t i = 1; i < rc; ++i) {
             const char *match;
             pcre_get_substring(input.c_str(), ovector, rc, i, &match);
             std::string match_str(match);
