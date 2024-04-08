@@ -1,7 +1,10 @@
 # Define the core library
 add_library(SvfCore
         include/AE/Nnexe/NNgraphIntervalSolver.h
-        lib/AE/Nnexe/NNgraphIntervalSolver.cpp)
+        lib/AE/Nnexe/NNgraphIntervalSolver.cpp
+        ../svf-llvm/tools/AE/IntervalZ3Solver.cpp
+        ../svf-llvm/tools/AE/IntervalZ3Solver.h
+)
 
 # Add the public headers as an include directory
 target_include_directories(SvfCore

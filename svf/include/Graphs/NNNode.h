@@ -1,7 +1,7 @@
 #ifndef SVF_NNNODE_H
 #define SVF_NNNODE_H
 
-#include <cstdlib>
+#include "cstdlib"
 #include "GenericGraph.h"
 #include "NNEdge.h"
 #include "Eigen/Dense"
@@ -98,7 +98,7 @@ public:
     void dump() const;
 
 public:
-    /// Get layer¡®s type(node)
+    /// Get layerï¿½ï¿½s type(node)
     virtual NodeK get_type() const = 0;
 
 protected:

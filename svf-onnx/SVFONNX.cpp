@@ -3,6 +3,7 @@
 #include "algorithm" /// For std::remove
 #include "filesystem"
 #include "Util/Options.h"
+#include "fstream"
 #include <filesystem>
 namespace fs = std::filesystem;
 #define CUR_DIR() (fs::path(__FILE__).parent_path())
@@ -80,7 +81,7 @@ SVFNN::SVFNN(std::string adress): onnxAdress{adress}{
             }
         }
     }
-
+    int jj=0;
     for(const auto& pair : cppMapa){
         /// Key: pair.first  Value: pair.second
         std::string name = pair.first;
@@ -99,6 +100,7 @@ SVFNN::SVFNN(std::string adress): onnxAdress{adress}{
                     basicnode.Intervalvalues = convertMatricesToIntervalMatrices(basicnode.values);
                     nodes.push_back(basicnode);
                 }else if(name.find(Gemm) != std::string::npos){
+                    std::cout<<"jj="<<jj<<std::endl;
                     gemmnode = GEMMparseAndFormat(nodeDataParts[2]);
                     gemmnode.gemmName = name;
                     Mat weight = restoreGEMMWeightToMatrix(gemmnode.weightDimensions, gemmnode.weightValues);
@@ -147,6 +149,7 @@ SVFNN::SVFNN(std::string adress): onnxAdress{adress}{
             }
         }
     }
+    jj++;
 }
 
 std::vector<std::string> SVFNN::splitString(const std::string &str, const std::string &delimiter) {
@@ -384,9 +387,14 @@ std::string SVFNN::trim(const std::string& str, const std::string& chars) {
 FullyconnectedInfo SVFNN::GEMMparseAndFormat(const std::string& input) {
     FullyconnectedInfo params;
     std::regex re("'(.*?)': \\[\\((.*?)\\), \\[(.*?)\\]\\]");
+    std::ofstream file("11.txt");
 
     std::smatch match;
     std::string str = input;
+    file<<str<<std::endl;
+    file.close();
+
+    std::cout<<"*********"<<str<<std::endl<<"**********";
 
     while (std::regex_search(str, match, re)) {
         std::string name = match[1];
