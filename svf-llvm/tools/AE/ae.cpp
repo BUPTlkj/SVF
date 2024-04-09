@@ -693,9 +693,19 @@ int main(int argc, char** argv)
         matrixr_biase(1,1) = 2;
         matrixr_biase(1,2) = 0;
 
-
         IntervalZ3Solver iz;
-        iz.Multiply(matrixr_weight, mats, matrixr_biase);
+        std::vector<std::vector<z3::expr_vector>> res_relation = iz.FullyConZ3RelationSolver(matrixr_weight, mats, matrixr_biase);
+
+        // 现在遍历matrixOfExprVectors以检查其内容
+        for (size_t ihh = 0; ihh < res_relation.size(); ++ihh) {
+            std::cout << "matrixOfExprVectors 中的第 " << ihh << " 个向量：" << std::endl;
+            for (size_t jhh = 0; jhh < res_relation[ihh].size(); ++jhh) {
+                std::cout << "  第 " << jhh << " 个 expr_vector 包含：" << std::endl;
+                for (unsigned khh = 0; khh < res_relation[ihh][jhh].size(); ++khh) {
+                    std::cout << "    " << res_relation[ihh][jhh][khh] << std::endl;
+                }
+            }
+        }
 
 
 

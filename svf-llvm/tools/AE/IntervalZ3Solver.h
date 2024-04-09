@@ -5,16 +5,20 @@
 namespace SVF{
 
 class IntervalZ3Solver{
+    z3::context ctx;
 public:
     /// Each layer' input matrix
 //    IntervalMatrices in_x;
+    IntervalZ3Solver() : ctx() {}
     ///
     /// \param W
     /// \param X
+    /// \param B
     /// \return
 
-    IntervalMatrices Multiply(const Mat& W, const IntervalMatrices& X, const Mat& Biase);
-    IntervalMatrices Multiply1(const Matrices& W, const IntervalMatrices& X);
+    std::vector<std::vector<z3::expr_vector>> FullyConZ3RelationSolver(const Mat& W, const IntervalMatrices& X, const Mat& B);
+    void ConvlutionalZ3ReltionSolver();
+
 
 
 

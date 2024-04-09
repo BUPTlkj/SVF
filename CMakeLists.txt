@@ -128,13 +128,16 @@ message(STATUS "Z3 STATUS:
   Z3 library file:        ${Z3_LIBRARIES}
   Z3 include directory:   ${Z3_INCLUDES}")
 
-find_package(Python 3.11 EXACT COMPONENTS Interpreter Development REQUIRED)
+#find_package(Python 3.11 EXACT COMPONENTS Interpreter Development REQUIRED)
 
-#find_package(Python 3 COMPONENTS Interpreter Development)
-#
-#if(Python_FOUND AND Python_VERSION VERSION_GREATER "3.12")
-#  message(FATAL_ERROR "Python version is greater than 3.12, but a version less than 3.12 is required.")
-#endif()
+find_package(Python 3 COMPONENTS Interpreter Development)
+
+message("Python INCLUDE DIR: ${Python_INCLUDE_DIRS}")
+message("Python LIB DIR: ${Python_LIBRARIES}")
+
+if(Python_FOUND AND Python_VERSION VERSION_GREATER "3.12")
+  message(FATAL_ERROR "Python version is greater than 3.12, but a version less than 3.12 is required.")
+endif()
 
 # Add the Z3 include directory and link the Z3 library to all targets of SVF
 link_libraries(${Z3_LIBRARIES})
