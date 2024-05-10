@@ -660,118 +660,118 @@ int main(int argc, char** argv)
         return 0;
     }else if(INNGT()){
 
-        u32_t a = 3;
-        u32_t b = 3;
+        // u32_t a = 3;
+        // u32_t b = 3;
 
-        /// Input_x
-        IntervalMat matrix(a,b);
-        matrix(0,0) = IntervalValue(2,2);
-        matrix(0,1) = IntervalValue(1,1);
-        matrix(0,2) = IntervalValue(0,0);
-        matrix(1,0) = IntervalValue(0,0);
-        matrix(1,1) = IntervalValue(2,2);
-        matrix(1,2) = IntervalValue(0,0);
+        // /// Input_x
+        // IntervalMat matrix(a,b);
+        // matrix(0,0) = IntervalValue(2,2);
+        // matrix(0,1) = IntervalValue(1,1);
+        // matrix(0,2) = IntervalValue(0,0);
+        // matrix(1,0) = IntervalValue(0,0);
+        // matrix(1,1) = IntervalValue(2,2);
+        // matrix(1,2) = IntervalValue(0,0);
 
-        IntervalMatrices mats;
-        mats.push_back(matrix);
+        // IntervalMatrices mats;
+        // mats.push_back(matrix);
 
-        /// Weight normal Matrix
-        Mat matrixr_weight(a,b);
-        matrixr_weight(0,0) = 2;
-        matrixr_weight(0,1) = 1;
-        matrixr_weight(0,2) = 0;
-        matrixr_weight(1,0) = 0;
-        matrixr_weight(1,1) = 2;
-        matrixr_weight(1,2) = 0;
+        // /// Weight normal Matrix
+        // Mat matrixr_weight(a,b);
+        // matrixr_weight(0,0) = 2;
+        // matrixr_weight(0,1) = 1;
+        // matrixr_weight(0,2) = 0;
+        // matrixr_weight(1,0) = 0;
+        // matrixr_weight(1,1) = 2;
+        // matrixr_weight(1,2) = 0;
 
-        /// Biase normal Matrix
-        Mat matrixr_biase(a,b);
-        matrixr_biase(0,0) = 2;
-        matrixr_biase(0,1) = 1;
-        matrixr_biase(0,2) = 0;
-        matrixr_biase(1,0) = 0;
-        matrixr_biase(1,1) = 2;
-        matrixr_biase(1,2) = 0;
+        // /// Biase normal Matrix
+        // Mat matrixr_biase(a,b);
+        // matrixr_biase(0,0) = 2;
+        // matrixr_biase(0,1) = 1;
+        // matrixr_biase(0,2) = 0;
+        // matrixr_biase(1,0) = 0;
+        // matrixr_biase(1,1) = 2;
+        // matrixr_biase(1,2) = 0;
 
-        IntervalZ3Solver iz;
-        std::vector<std::vector<z3::expr_vector>> res_relation = iz.FullyConZ3RelationSolver(matrixr_weight, mats, matrixr_biase);
+        // IntervalZ3Solver iz;
+        // std::vector<std::vector<z3::expr_vector>> res_relation = iz.FullyConZ3RelationSolver(matrixr_weight, mats, matrixr_biase);
 
-        // 现在遍历matrixOfExprVectors以检查其内容
-        for (size_t ihh = 0; ihh < res_relation.size(); ++ihh) {
-            std::cout << "matrixOfExprVectors 中的第 " << ihh << " 个向量：" << std::endl;
-            for (size_t jhh = 0; jhh < res_relation[ihh].size(); ++jhh) {
-                std::cout << "  第 " << jhh << " 个 expr_vector 包含：" << std::endl;
-                for (unsigned khh = 0; khh < res_relation[ihh][jhh].size(); ++khh) {
-                    std::cout << "    " << res_relation[ihh][jhh][khh] << std::endl;
-                }
-            }
-        }
+        // // 现在遍历matrixOfExprVectors以检查其内容
+        // for (size_t ihh = 0; ihh < res_relation.size(); ++ihh) {
+        //     std::cout << "matrixOfExprVectors 中的第 " << ihh << " 个向量：" << std::endl;
+        //     for (size_t jhh = 0; jhh < res_relation[ihh].size(); ++jhh) {
+        //         std::cout << "  第 " << jhh << " 个 expr_vector 包含：" << std::endl;
+        //         for (unsigned khh = 0; khh < res_relation[ihh][jhh].size(); ++khh) {
+        //             std::cout << "    " << res_relation[ihh][jhh][khh] << std::endl;
+        //         }
+        //     }
+        // }
 
 
 
-//        std::ifstream file("11.txt");
-//        std::stringstream buffer;
-//        buffer << file.rdbuf();
-//
-//        std::string str = buffer.str();
-//        std::regex re("'(.*?)': \\[\\((.*?)\\), \\[(.*?)\\]\\]");
-//
-//        std::smatch match;
-//
-//        std::cout<<std::regex_search(str, match, re)<<std::endl;
-//
-//        /// ONNX address
-//        outs()<<Options::NNName();
-//        const std::string address = Options::NNName();
-//
-//        /// DataSet address
-//        outs()<<Options::DataSetPath();
-//        const std::string datapath = Options::DataSetPath();
-//
-//        /// parse onnx into svf-onnx
-//        SVFNN svfnn(address);
-//        auto nodes = svfnn.get_nodes();
-//
-//        /// Init nn-graph builder
-//        NNGraphBuilder nngraph;
-//
-//        /// Init & Add node
-//        for (const auto& node : nodes) {
-//            std::visit(nngraph, node);
-//        }
-//
-//        /// Init & Add Edge
-//        nngraph.AddEdges();
-//
-//        /// Load dataset: mnist or cifa-10, number of dataset
-//        LoadData dataset(datapath, 1);
-//        /// Input pixel matrix
-//        std::pair<LabelVector, MatrixVector_3c> x = dataset.read_dataset();
-//        std::cout<<"Label: "<<x.first.front()<<std::endl;
-//
-//        double perti = 0.001;
-//        std::vector<LabelAndBounds> per_x = dataset.perturbateImages(x, perti);
-//
-//        /// Run abstract interpretation on NNgraph
-//        nngraph.Traversal(x.second.front());
-//
-//        /// Run abstract interpretation on NNgraph Interval
-//        std::vector<std::pair<u32_t, IntervalMatrices>> in_x = dataset.convertLabelAndBoundsToIntervalMatrices(per_x) ;
-//        for(u32_t i = 0; i < in_x.size(); i++){
-//            std::cout<<in_x[i].first<<std::endl;
-//            for(const auto&intervalMat: in_x[i].second){
-//                std::cout << "IntervalMatrix :\n";
-//                std::cout << "Rows: " << intervalMat.rows() << ", Columns: " << intervalMat.cols() << "\n";
-//                for (u32_t k = 0; k < intervalMat.rows(); ++k) {
-//                    for (u32_t j = 0; j < intervalMat.cols(); ++j) {
-//                        std::cout<< "[ "<< intervalMat(k, j).lb().getRealNumeral()<<", "<< intervalMat(k, j).ub().getRealNumeral() <<" ]"<< "\t";
-//                    }
-//                    std::cout << std::endl;
-//                }
-//                std::cout<<"****************"<<std::endl;
-//            }
-//            nngraph.IntervalTraversal(in_x[i].second);
-//        }
+       std::ifstream file("11.txt");
+       std::stringstream buffer;
+       buffer << file.rdbuf();
+
+       std::string str = buffer.str();
+       std::regex re("'(.*?)': \\[\\((.*?)\\), \\[(.*?)\\]\\]");
+
+       std::smatch match;
+
+       std::cout<<std::regex_search(str, match, re)<<std::endl;
+
+       /// ONNX address
+       outs()<<Options::NNName();
+       const std::string address = Options::NNName();
+
+       /// DataSet address
+       outs()<<Options::DataSetPath();
+       const std::string datapath = Options::DataSetPath();
+
+       /// parse onnx into svf-onnx
+       SVFNN svfnn(address);
+       auto nodes = svfnn.get_nodes();
+
+       /// Init nn-graph builder
+       NNGraphBuilder nngraph;
+
+       /// Init & Add node
+       for (const auto& node : nodes) {
+           std::visit(nngraph, node);
+       }
+
+       /// Init & Add Edge
+       nngraph.AddEdges();
+
+       /// Load dataset: mnist or cifa-10, number of dataset
+       LoadData dataset(datapath, 1);
+       /// Input pixel matrix
+       std::pair<LabelVector, MatrixVector_3c> x = dataset.read_dataset();
+       std::cout<<"Label: "<<x.first.front()<<std::endl;
+
+       double perti = 0.001;
+       std::vector<LabelAndBounds> per_x = dataset.perturbateImages(x, perti);
+
+       /// Run abstract interpretation on NNgraph
+       nngraph.Traversal(x.second.front());
+
+    //    /// Run abstract interpretation on NNgraph Interval
+    //    std::vector<std::pair<u32_t, IntervalMatrices>> in_x = dataset.convertLabelAndBoundsToIntervalMatrices(per_x) ;
+    //    for(u32_t i = 0; i < in_x.size(); i++){
+    //        std::cout<<in_x[i].first<<std::endl;
+    //        for(const auto&intervalMat: in_x[i].second){
+    //            std::cout << "IntervalMatrix :\n";
+    //            std::cout << "Rows: " << intervalMat.rows() << ", Columns: " << intervalMat.cols() << "\n";
+    //            for (u32_t k = 0; k < intervalMat.rows(); ++k) {
+    //                for (u32_t j = 0; j < intervalMat.cols(); ++j) {
+    //                    std::cout<< "[ "<< intervalMat(k, j).lb().getRealNumeral()<<", "<< intervalMat(k, j).ub().getRealNumeral() <<" ]"<< "\t";
+    //                }
+    //                std::cout << std::endl;
+    //            }
+    //            std::cout<<"****************"<<std::endl;
+    //        }
+    //        nngraph.IntervalTraversal(in_x[i].second);
+    //    }
 
         return 0;
     }

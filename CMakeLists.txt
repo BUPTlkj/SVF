@@ -129,6 +129,12 @@ message(STATUS "Z3 STATUS:
   Z3 include directory:   ${Z3_INCLUDES}")
 
 #find_package(Python 3.11 EXACT COMPONENTS Interpreter Development REQUIRED)
+find_package(PkgConfig REQUIRED)
+pkg_check_modules(PCRE REQUIRED libpcre)
+
+
+include_directories(${PCRE_INCLUDE_DIRS})
+link_directories(${PCRE_LIBRARY_DIRS})
 
 find_package(Python 3 COMPONENTS Interpreter Development)
 

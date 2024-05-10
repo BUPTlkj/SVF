@@ -30,16 +30,18 @@ Matrices SolverEvaluate::FlattenNeuronNodeevaluate() const{
 
     Matrices x_out;
 
-    Vector flatten_x(in_depth * in_height * in_width);
+    Mat flatten_x(1, in_depth * in_height * in_width);
+
     for (u32_t i = 0; i < in_depth; i++) {
         for (u32_t j = 0; j < in_height; j++) {
             for (u32_t k = 0; k < in_width; k++) {
-                flatten_x(in_width * in_depth * j + in_depth * k + i) = in_x[i](j, k);
+                flatten_x(0, in_width * in_height * i + in_width * j + k) = in_x[i](j, k);
             }
         }
     }
-    Mat temp = flatten_x;
-    x_out.push_back(temp);
+    // Mat temp = flatten_x;
+    x_out.push_back(flatten_x);
+    std::cout<<"Flatten size: "<<x_out[0].rows()<<" "<<x_out[0].cols()<<std::endl;
 
     return x_out;
 }
