@@ -39,9 +39,9 @@ Matrices SolverEvaluate::FlattenNeuronNodeevaluate() const{
             }
         }
     }
+
     // Mat temp = flatten_x;
     x_out.push_back(flatten_x);
-    std::cout<<"Flatten size: "<<x_out[0].rows()<<" "<<x_out[0].cols()<<std::endl;
 
     return x_out;
 }
@@ -142,12 +142,23 @@ Matrices SolverEvaluate::FullyConNeuronNodeevaluate( const FullyConNeuronNode *f
     Mat weight = fully->weight;
     Mat bias = fully->bias;
 
+    // std::cout<<"HERE......"<<std::endl;
+
     ///wx+b
     /// ensure(1, y, 1)
     for (const auto& mat : in_x) {
-        if (mat.rows() != weight.cols() || mat.cols() != 1) {
-            throw std::runtime_error("In Flatten, false init");
-        }
+        std::cout<<"mat.rows()"<<mat.rows()<<std::endl;
+        std::cout<<"mat.cols()"<<mat.cols()<<std::endl;
+        std::cout<<"weight.cols()"<<weight.cols()<<std::endl;
+        std::cout<<"mat.cols()"<<mat.cols()<<std::endl;
+
+        // if (mat.cols() != weight.cols() || mat.rows() != 1) {
+        //     throw std::runtime_error("In Flatten, false init");
+        // }
+
+        // if (mat.rows() != weight.cols() || mat.cols() != 1) {
+        //     throw std::runtime_error("In Flatten, false init");
+        // }
     }
 
     /// c(x, 1)
@@ -158,11 +169,32 @@ Matrices SolverEvaluate::FullyConNeuronNodeevaluate( const FullyConNeuronNode *f
     Matrices out_x;
     out_x.reserve(in_depth);
 
+    std::cout<<"HERE...... 168"<<std::endl;
+
     /// weight * in_x[i] + bias -> out_x
     for (const auto& mat : in_x) {
-        Eigen::MatrixXd tempResult = weight * mat + bias;
+        std::cout << "Matrix weight has " << weight.rows() << " rows and " << weight.cols() << " columns." << std::endl;
+        std::cout << "Matrix mat has " << mat.rows() << " rows and " << mat.cols() << " columns." << std::endl;
+        std::cout << "Matrix bias has " << bias.rows() << " rows and " << bias.cols() << " columns." << std::endl;
+        std::cout << "Transposed Matrix bias has " << bias.transpose().rows() << " rows and " << bias.transpose().cols() << " columns." << std::endl;
+
+        // // Get the transpose of the bias..... but I don't know how to change how bias is stored in "FullyConNeuronNode *fully"
+        // // Eigen::MatrixXd tempResult = mat * weight + bias;
+
+        // std::cout << "Matrix mat:\n" << mat << std::endl;
+        // std::cout << "Matrix weight:\n" << weight << std::endl;
+        // std::cout << "Matrix bias:\n" << bias << std::endl;
+
+        // std::cout << "Transposed Matrix mat:\n" << mat.transpose() << std::endl;
+    
+        Eigen::MatrixXd tempResult = weight * mat.transpose() + bias;
+        // std::cout<<"HERE...... 180"<<std::endl;
+
         out_x.push_back(tempResult);
     }
+
+    std::cout<<"HERE...... 192"<<std::endl;
+
 
     return out_x;
 }
