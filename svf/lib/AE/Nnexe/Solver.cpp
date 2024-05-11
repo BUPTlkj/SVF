@@ -30,6 +30,16 @@ Matrices SolverEvaluate::FlattenNeuronNodeevaluate() const{
 
     Matrices x_out;
 
+    // Mat flatten_x(in_depth * in_height * in_width, 1);
+
+    // for (u32_t i = 0; i < in_depth; i++) {
+    //     for (u32_t j = 0; j < in_height; j++) {
+    //         for (u32_t k = 0; k < in_width; k++) {
+    //             flatten_x(in_width * in_height * i + in_width * j + k, 0) = in_x[i](j, k);
+    //         }
+    //     }
+    // }
+
     Mat flatten_x(1, in_depth * in_height * in_width);
 
     for (u32_t i = 0; i < in_depth; i++) {
@@ -156,9 +166,9 @@ Matrices SolverEvaluate::FullyConNeuronNodeevaluate( const FullyConNeuronNode *f
         //     throw std::runtime_error("In Flatten, false init");
         // }
 
-        // if (mat.rows() != weight.cols() || mat.cols() != 1) {
-        //     throw std::runtime_error("In Flatten, false init");
-        // }
+        if (mat.rows() != weight.cols() || mat.cols() != 1) {
+            throw std::runtime_error("In Flatten, false init");
+        }
     }
 
     /// c(x, 1)
@@ -187,7 +197,7 @@ Matrices SolverEvaluate::FullyConNeuronNodeevaluate( const FullyConNeuronNode *f
 
         // std::cout << "Transposed Matrix mat:\n" << mat.transpose() << std::endl;
     
-        Eigen::MatrixXd tempResult = weight * mat.transpose() + bias;
+        Eigen::MatrixXd tempResult = weight * mat + bias;
         // std::cout<<"HERE...... 180"<<std::endl;
 
         out_x.push_back(tempResult);
