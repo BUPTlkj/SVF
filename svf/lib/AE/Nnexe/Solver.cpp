@@ -149,8 +149,8 @@ Matrices SolverEvaluate::FullyConNeuronNodeevaluate( const FullyConNeuronNode *f
     std::cout<<"FullyConing......"<<std::endl;
     /// The step of processing input flattening operation is equivalent to the GEMM node operation in ONNX
     u32_t in_depth = in_x.size();
-    Mat weight = fully->weight;
-    Mat bias = fully->bias;
+    Mat weight = fully->weight.transpose();
+    Mat bias = fully->bias.transpose();
 
     // std::cout<<"HERE......"<<std::endl;
 
@@ -159,20 +159,22 @@ Matrices SolverEvaluate::FullyConNeuronNodeevaluate( const FullyConNeuronNode *f
     for (const auto& mat : in_x) {
         std::cout<<"mat.rows()"<<mat.rows()<<std::endl;
         std::cout<<"mat.cols()"<<mat.cols()<<std::endl;
+        std::cout<<"weight.rows()"<<weight.rows()<<std::endl;
         std::cout<<"weight.cols()"<<weight.cols()<<std::endl;
-        std::cout<<"mat.cols()"<<mat.cols()<<std::endl;
+        std::cout<<"bias.rows()"<<bias.rows()<<std::endl;
+        std::cout<<"bias.cols()"<<bias.cols()<<std::endl;
 
         // if (mat.cols() != weight.cols() || mat.rows() != 1) {
         //     throw std::runtime_error("In Flatten, false init");
         // }
 
-        if (mat.rows() != weight.cols() || mat.cols() != 1) {
+        if (mat.cols() != weight.rows() || mat.rows() != 1) {
             throw std::runtime_error("In Flatten, false init");
         }
     }
 
     /// c(x, 1)
-    if (bias.rows() != weight.rows() || bias.cols() != 1) {
+    if (bias.cols() != weight.cols() || bias.rows() != 1) {
         throw std::runtime_error("In flatten, bias is wrong");
     }
 
@@ -197,7 +199,7 @@ Matrices SolverEvaluate::FullyConNeuronNodeevaluate( const FullyConNeuronNode *f
 
         // std::cout << "Transposed Matrix mat:\n" << mat.transpose() << std::endl;
     
-        Eigen::MatrixXd tempResult = weight * mat + bias;
+        Eigen::MatrixXd tempResult = mat * weight + bias;
         // std::cout<<"HERE...... 180"<<std::endl;
 
         out_x.push_back(tempResult);
