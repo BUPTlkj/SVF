@@ -225,6 +225,12 @@ Matrices SolverEvaluate::ConvNeuronNodeevaluate( const ConvNeuronNode *conv) con
     u32_t out_height = ((in_x[0].rows() - filter[0].get_height() + 2*padding) / stride) + 1;
     u32_t out_width = ((in_x[0].cols() - filter[0].get_width() + 2*padding) / stride) + 1;
 
+    std::cout << "Filter number " << filter_num << std::endl;
+    std::cout << "Filter channel " << filter_depth << std::endl;
+    std::cout << "Filter height " << filter_height << std::endl;
+    std::cout << "Filter width " << filter_width << std::endl;
+    // std::cout << "Filter bias " << bias << std::endl;
+
     /// Padding
     Matrices padded_x(in_x.size());
     for (u32_t i = 0; i < in_x.size(); ++i) {
