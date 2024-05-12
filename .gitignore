@@ -24,3 +24,5 @@ doxygen/
 *.svf
 cmake-build-debug/
 compile_commands.json
+/Users/den184/Documents/UNSW/SVF/SVF-Kane/LeNet/data/MNIST/raw
+/Users/den184/Documents/UNSW/SVF/SVF-Kane/ModelTesting/data/MNIST/raw
