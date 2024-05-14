@@ -67,7 +67,6 @@ SVFNN::SVFNN(std::string adress): onnxAdress{adress}{
     for(const auto& pair : cppMapa) {
         /// Key: pair.first  Value: pair.second
         std::string name = pair.first;
-        std::cout<<"66666666name:"<<name<<std::endl;
         auto nodeDataParts = parseNodeData(pair.second);
         for (u32_t i = 0; i < nodeDataParts.size(); ++i) {
             if (i == 3) {
@@ -93,7 +92,6 @@ SVFNN::SVFNN(std::string adress): onnxAdress{adress}{
     constantnode.name = "Constant";
     nodes.push_back(constantnode);
 
-    int jj=0;
     for(const auto& pair : cppMapa){
         /// Key: pair.first  Value: pair.second
         std::string name = pair.first;
@@ -103,7 +101,6 @@ SVFNN::SVFNN(std::string adress): onnxAdress{adress}{
 
             if(i==3){ /// The third one is specific dimensions and data
                 name = toLowerCase(name);
-                std::cout<<"aaaBEFORE::::::"<<name<<std::endl;
                 if (name.find(Constant) != std::string::npos){
                     /// nothing to be done
                 }else if(name.find(Sub) != std::string::npos || name.find(Add) != std::string::npos || name.find(Mul) != std::string::npos || name.find(Div) != std::string::npos){
@@ -115,7 +112,6 @@ SVFNN::SVFNN(std::string adress): onnxAdress{adress}{
                     nodes.push_back(basicnode);
                 }else if(name.find(Gemm) != std::string::npos){
                     std::cout<<"Node: "<<name<<std::endl;
-                    std::cout<<"jj="<<jj<<std::endl;
                     gemmnode = GEMMparseAndFormat(nodeDataParts[2]);
                     gemmnode.gemmName = name;
                     Mat weight = restoreGEMMWeightToMatrix(gemmnode.weightDimensions, gemmnode.weightValues);
@@ -168,7 +164,6 @@ SVFNN::SVFNN(std::string adress): onnxAdress{adress}{
             }
         }
     }
-    jj++;
 }
 
 std::vector<std::string> SVFNN::splitString(const std::string &str, const std::string &delimiter) {
@@ -412,8 +407,6 @@ FullyconnectedInfo SVFNN::GEMMparseAndFormat(const std::string& input) {
     std::string str = input;
     file<<str<<std::endl;
     file.close();
-
-    std::cout<<"*********"<<str<<std::endl<<"**********";
 
     while (std::regex_search(str, match, re)) {
         std::string name = match[1];

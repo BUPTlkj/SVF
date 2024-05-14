@@ -139,13 +139,11 @@ Matrices SolverEvaluate::MaxPoolNeuronNodeevaluate( const MaxPoolNeuronNode *max
                         u32_t rowIndex = i * stride_height + m;
                         u32_t colIndex = j * stride_width + n;
                         double currentVal = paddedMatrix(rowIndex, colIndex);
-                        std::cout<<"currentVal: "<<currentVal<<std::endl;
                         if (currentVal > maxVal) {
                             maxVal = currentVal;
                         }
                     }
                 }
-                std::cout<<"maxVal: "<<maxVal<<std::endl;
                 outMatrix(i, j) = maxVal;
             }
         }

@@ -709,23 +709,23 @@ int main(int argc, char** argv)
 
 
 
-       std::ifstream file("11.txt");
-       std::stringstream buffer;
-       buffer << file.rdbuf();
-
-       std::string str = buffer.str();
-       std::regex re("'(.*?)': \\[\\((.*?)\\), \\[(.*?)\\]\\]");
-
-       std::smatch match;
-
-       std::cout<<std::regex_search(str, match, re)<<std::endl;
+//       std::ifstream file("11.txt");
+//       std::stringstream buffer;
+//       buffer << file.rdbuf();
+//
+//       std::string str = buffer.str();
+//       std::regex re("'(.*?)': \\[\\((.*?)\\), \\[(.*?)\\]\\]");
+//
+//       std::smatch match;
+//
+//       std::cout<<std::regex_search(str, match, re)<<std::endl;
 
        /// ONNX address
-       outs()<<Options::NNName();
+       outs()<<Options::NNName()<<std::endl;
        const std::string address = Options::NNName();
 
        /// DataSet address
-       outs()<<Options::DataSetPath();
+       outs()<<Options::DataSetPath()<<std::endl;
        const std::string datapath = Options::DataSetPath();
 
        /// parse onnx into svf-onnx
