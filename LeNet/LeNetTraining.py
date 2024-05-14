@@ -86,7 +86,7 @@ for t in range(epoch):
         min_acc = a
         print('save best model original')
 
-        torch.save(model.state_dict(), 'save_model_original_MaxPool2d/best_model_MaxPool2d.onnx')
+        torch.save(model.state_dict(), 'save_model_original_MaxPool2d/best_model_MaxPool2d.pth')
 
         # Specify a dummy input to the model
         dummy_input = torch.randn(1, 1, 28, 28, device='cpu')
