@@ -51,10 +51,11 @@ private:
     std::vector<std::unique_ptr<Direct2NeuronEdge>> edges;
     /// init Graph
     NeuronNet *g = new NeuronNet();
+    NodeID nodeId = 0;
 
 public:
     /// Allocate the NodeID
-    inline u32_t getNodeID(const std::string& str);
+    // inline u32_t getNodeID(const std::string& str);
 
     /// Thoese operator() is designed for collecting instance
     void operator()(const ConstantNodeInfo& node);
@@ -72,6 +73,8 @@ public:
     void AddEdges();
     void Traversal(Matrices& in_x);
     void IntervalTraversal(IntervalMatrices & in_x);
+    inline u32_t getNodeID();
+    inline void setNodeID();
 };
 
 }

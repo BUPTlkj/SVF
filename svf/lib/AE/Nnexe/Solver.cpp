@@ -53,6 +53,10 @@ Matrices SolverEvaluate::FlattenNeuronNodeevaluate() const{
     // Mat temp = flatten_x;
     x_out.push_back(flatten_x);
 
+    std::cout<<"Flatten x_out size: "<<x_out.size()<<std::endl;
+    std::cout<<"Flatten x_out rows: "<<x_out[0].rows()<<std::endl;
+    std::cout<<"Flatten x_out cols: "<<x_out[0].cols()<<std::endl;
+
     return x_out;
 }
 
@@ -112,6 +116,9 @@ Matrices SolverEvaluate::MaxPoolNeuronNodeevaluate( const MaxPoolNeuronNode *max
     u32_t stride_height = maxpool->stride_height;
     u32_t stride_width = maxpool->stride_width;
 
+    std::cout<<"window_width: "<<window_width<<std::endl;
+    std::cout<<"window_height: "<<window_height<<std::endl;
+
     for (size_t depth = 0; depth < in_x.size(); ++depth) {
         /// Padding
         u32_t padded_height = in_height + 2 * pad_height;
@@ -132,11 +139,13 @@ Matrices SolverEvaluate::MaxPoolNeuronNodeevaluate( const MaxPoolNeuronNode *max
                         u32_t rowIndex = i * stride_height + m;
                         u32_t colIndex = j * stride_width + n;
                         double currentVal = paddedMatrix(rowIndex, colIndex);
+                        std::cout<<"currentVal: "<<currentVal<<std::endl;
                         if (currentVal > maxVal) {
                             maxVal = currentVal;
                         }
                     }
                 }
+                std::cout<<"maxVal: "<<maxVal<<std::endl;
                 outMatrix(i, j) = maxVal;
             }
         }
@@ -267,5 +276,6 @@ Matrices SolverEvaluate::ConvNeuronNodeevaluate( const ConvNeuronNode *conv) con
 Matrices SolverEvaluate::ConstantNeuronNodeevaluate() const{
     std::cout<<"Constanting......."<<std::endl;
     /// This is an entry, nothing needs to do.
+    
     return in_x;
 }

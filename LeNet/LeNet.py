@@ -8,9 +8,9 @@ class MyLeNet5(nn.Module):
 
         self.c1 = nn.Conv2d(in_channels=1, out_channels=4, kernel_size=5, padding=2)
         self.relu = nn.ReLU()
-        self.s2 = nn.AvgPool2d(kernel_size=2, stride=2)
+        self.s2 = nn.MaxPool2d(kernel_size=2, stride=2)
         self.c3 = nn.Conv2d(in_channels=4, out_channels=16, kernel_size=5)
-        self.s4 = nn.AvgPool2d(kernel_size=2, stride=2) 
+        self.s4 = nn.MaxPool2d(kernel_size=2, stride=2) 
         self.c5 = nn.Conv2d(in_channels=16, out_channels=96, kernel_size=5)
 
         self.flatten = nn.Flatten()

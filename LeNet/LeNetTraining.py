@@ -79,9 +79,9 @@ for t in range(epoch):
     a = val(test_dataloader, model, loss_fn) 
 
     if a > min_acc:
-        folder = 'save_model_original'
+        folder = 'save_model_original_MaxPool2d'
         if not os.path.exists(folder):
-            os.mkdir('save_model_original')
+            os.mkdir('save_model_original_MaxPool2d')
 
         min_acc = a
         print('save best model original')
@@ -92,6 +92,6 @@ for t in range(epoch):
         dummy_input = torch.randn(1, 1, 28, 28, device='cpu')
 
         # Save the model as an ONNX file
-        torch.onnx.export(model, dummy_input, 'save_model_original/best_model.onnx', input_names=['input'], output_names=['output'])
+        torch.onnx.export(model, dummy_input, 'save_model_original_MaxPool2d/best_model_MaxPool2d.onnx', input_names=['input'], output_names=['output'])
 
 print('Done!')

@@ -112,8 +112,8 @@ public:
 
     /// 1. Read Python Analysis
     std::string PyObjectToString(PyObject* pObj);
-    std::map<std::string, std::string> processPythonDict(PyObject* pDict);
-    std::map<std::string, std::string> callPythonFunction(
+    std::vector<std::pair<std::string, std::string>> processPythonDict(PyObject* pDict);
+    std::vector<std::pair<std::string, std::string>> callPythonFunction(
         const std::string& address, const std::string& functionName);
 
     /// 2. Parse function, return a string vector containing four parts of information

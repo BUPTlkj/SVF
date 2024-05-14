@@ -567,19 +567,20 @@ def InteractwithCpp(model_path):
 				current_node_name = ii_[1]
 			if 'op_type' in ii_:
 				current_node_op = ii_[1].replace("\"", "").strip()
-		current_node_name = current_node_name.split('_')[1].replace("\"","") + "_" + current_node_name.split('_')[0].replace("\"","").strip()
-		parts = current_node_name.split("_")
-		if len(parts) == 2 and parts[0].isdigit():
-			number = int(parts[0])
-			if 0 <= number <= 9:
-				pre_st = f"{number:02}_{parts[1]}"
-				current_node_name = pre_st
+		# current_node_name = current_node_name.split('_')[1].replace("\"","") + "_" + current_node_name.split('_')[0].replace("\"","").strip()
+		# parts = current_node_name.split("_")
+		# if len(parts) == 2 and parts[0].isdigit():
+		# 	number = int(parts[0])
+		# 	if 0 <= number <= 9:
+		# 		pre_st = f"{number:02}_{parts[1]}"
+		# 		current_node_name = pre_st
+
 		node_info.append(current_node_op)
 		node_info.append(current_node_input_name)
 		dic = get_resource(shape_map, constants_map, current_node_input_name)
 		node_info.append(dic)
 		node_info.append(current_node_output_name)
-		output_graph[current_node_name] = node_info
+		output_graph[current_node_op.strip() + '_' + current_node_name.replace('\"', '').replace(' ', '')] = node_info
 
 	return output_graph
 
@@ -656,5 +657,10 @@ def get_strides(model_path):
 	return res
 
 
+if __name__ == "__main__":
+	onnxpath = "/Users/den184/Documents/UNSW/SVF/SVF-Kane/svf-onnx/dataset/mnist_conv_maxpool.onnx"
 
+	res  = InteractwithCpp(onnxpath)
+
+	print(res)
 

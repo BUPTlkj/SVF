@@ -280,52 +280,66 @@ void NNGraphTraversal::IntervalDFS(std::set<const NeuronNode *> &visited, std::v
 }
 
 /// NNGraph Bulid
-/// Allocate the NodeID
-inline u32_t NNGraphBuilder::getNodeID(const std::string& str) {
-    size_t underscorePos = str.find('_'); /// Find the location of "_"
-    if (underscorePos == std::string::npos) {
-        std::cout<<"NodeID has been not allocated!"<<std::endl;
-        exit(0);
-    }
-    /// Extract substrings before "_"
-    std::string numberStr = str.substr(0, underscorePos);
+inline u32_t NNGraphBuilder::getNodeID(){
+    return nodeId;
 
-    size_t endpos = numberStr.find_last_not_of(" ");
-    if (std::string::npos != endpos) {
-        /// Delete all characters from endpos+1 to the end of the string
-        numberStr = numberStr.substr(1, endpos + 1);
-        if (numberStr.length() == 2 && numberStr[0] == '0'){
-            numberStr = numberStr.substr(1, 1);
-        }
-    }
-    u32_t number = std::stoi(numberStr);
-    return number;
 }
+
+void NNGraphBuilder::setNodeID(){
+    nodeId = nodeId + 1;
+}
+
+
+/// Allocate the NodeID
+// inline u32_t NNGraphBuilder::getNodeID(const std::string& str) {
+//     size_t underscorePos = str.find('_'); /// Find the location of "_"
+//     if (underscorePos == std::string::npos) {
+//         std::cout<<"NodeID has been not allocated!"<<std::endl;
+//         exit(0);
+//     }
+//     /// Extract substrings before "_"
+//     std::string numberStr = str.substr(0, underscorePos);
+
+//     size_t endpos = numberStr.find_last_not_of(" ");
+//     if (std::string::npos != endpos) {
+//         /// Delete all characters from endpos+1 to the end of the string
+//         numberStr = numberStr.substr(1, endpos + 1);
+//         if (numberStr.length() == 2 && numberStr[0] == '0'){
+//             numberStr = numberStr.substr(1, 1);
+//         }
+//     }
+//     u32_t number = std::stoi(numberStr);
+//     return number;
+// }
 
 /// Thoese operator() is designed for collecting instance
 void NNGraphBuilder::operator()(const ConstantNodeInfo& node) {
-    NodeID id = getNodeID(node.name);
+    NodeID id = getNodeID();
+    setNodeID();
     OrderedNodeName.push_back(node.name);
     ConstantNodeIns[node.name] = new ConstantNeuronNode(id);
     g->addConstantNeuronNode(ConstantNodeIns[node.name]);
 }
 
 void NNGraphBuilder::operator()(const BasicNodeInfo& node)  {
-    NodeID id = getNodeID(node.name);
+    NodeID id = getNodeID();
+    setNodeID();
     OrderedNodeName.push_back(node.name);
     BasicOPNodeIns[node.name] = new BasicOPNeuronNode(id, node.typestr, node.values, node.Intervalvalues);
     g->addBasicOPNeuronNode(BasicOPNodeIns[node.name]);
 }
 
 void NNGraphBuilder::operator()(const FullyconnectedInfo& node)  {
-    NodeID id = getNodeID(node.gemmName);
+    NodeID id = getNodeID();
+    setNodeID();
     OrderedNodeName.push_back(node.gemmName);
     FullyConNodeIns[node.gemmName] = new FullyConNeuronNode(id, node.weight, node.bias, node.Intervalweight, node.Intervalbias);
     g->addFullyConNeuronNode(FullyConNodeIns[node.gemmName]);
 }
 
 void NNGraphBuilder::operator()(const ConvNodeInfo& node) {
-    NodeID id = getNodeID(node.name);
+    NodeID id = getNodeID();
+    setNodeID();
     OrderedNodeName.push_back(node.name);
     ConvNodeIns[node.name] = new ConvNeuronNode(id, node.filter, node.conbias, node.pads.first, node.strides.first, node.Intervalbias);
     g->addConvNeuronNode(ConvNodeIns[node.name]);
@@ -333,21 +347,24 @@ void NNGraphBuilder::operator()(const ConvNodeInfo& node) {
 }
 
 void NNGraphBuilder::operator()(const ReluNodeInfo& node) {
-    NodeID id = getNodeID(node.name);
+    NodeID id = getNodeID();
+    setNodeID();
     OrderedNodeName.push_back(node.name);
     ReLuNodeIns[node.name] = new ReLuNeuronNode(id);
     g->addReLuNeuronNode(ReLuNodeIns[node.name]);
 }
 
 void NNGraphBuilder::operator()(const FlattenNodeInfo& node) {
-    NodeID id = getNodeID(node.name);
+    NodeID id = getNodeID();
+    setNodeID();
     OrderedNodeName.push_back(node.name);
     FlattenNodeIns[node.name] = new FlattenNeuronNode(id);
     g->addFlattenNeuronNode(FlattenNodeIns[node.name]);
 }
 
 void NNGraphBuilder::operator()(const MaxPoolNodeInfo& node) {
-    NodeID id = getNodeID(node.name);
+    NodeID id = getNodeID();
+    setNodeID();
     OrderedNodeName.push_back(node.name);
     MaxPoolNodeIns[node.name] = new MaxPoolNeuronNode(id, node.windows.first, node.windows.second, node.strides.first, node.strides.second, node.pads.first, node.pads.second);
     g->addMaxPoolNeuronNode(MaxPoolNodeIns[node.name]);

@@ -13,6 +13,12 @@ namespace fs = std::filesystem;
 
 using namespace SVF;
 
+std::string toLowerCase(const std::string& str) {
+    std::string lowerStr = str;
+    std::transform(lowerStr.begin(), lowerStr.end(), lowerStr.begin(), ::tolower);
+    return lowerStr;
+}
+
 std::vector<u32_t> SVFNN::parseDimensions(const std::string& input) {
     std::vector<u32_t> dimensions;
     std::stringstream ss(input);
@@ -28,19 +34,19 @@ std::vector<u32_t> SVFNN::parseDimensions(const std::string& input) {
 
 /// Constructor, just provide the ONNX address
 SVFNN::SVFNN(std::string adress): onnxAdress{adress}{
-    std::string Constant = "Constant";
+    std::string Constant = "constant";
     /// basci op
-    std::string Sub = "Sub";
-    std::string Add = "Add";
-    std::string Mul = "Mul";
-    std::string Div = "Div";
+    std::string Sub = "sub";
+    std::string Add = "add";
+    std::string Mul = "mul";
+    std::string Div = "div";
 
-    std::string Gemm = "Gemm";
-    std::string Conv = "Conv";
-    std::string Relu = "Relu";
-    std::string  Flatten = "Flatten";
+    std::string Gemm = "gemm";
+    std::string Conv = "conv";
+    std::string Relu = "relu";
+    std::string  Flatten = "flatten";
     /// 22 Feb
-    std::string MaxPool = "MaxPool";
+    std::string MaxPool = "maxpool";
     /// The information of Maxpool and conv is in SpecialInfo
     std::string SepcialInfo = "SepcialInfo";
 
@@ -61,6 +67,7 @@ SVFNN::SVFNN(std::string adress): onnxAdress{adress}{
     for(const auto& pair : cppMapa) {
         /// Key: pair.first  Value: pair.second
         std::string name = pair.first;
+        std::cout<<"66666666name:"<<name<<std::endl;
         auto nodeDataParts = parseNodeData(pair.second);
         for (u32_t i = 0; i < nodeDataParts.size(); ++i) {
             if (i == 3) {
@@ -81,6 +88,11 @@ SVFNN::SVFNN(std::string adress): onnxAdress{adress}{
             }
         }
     }
+
+
+    constantnode.name = "Constant";
+    nodes.push_back(constantnode);
+
     int jj=0;
     for(const auto& pair : cppMapa){
         /// Key: pair.first  Value: pair.second
@@ -90,16 +102,19 @@ SVFNN::SVFNN(std::string adress): onnxAdress{adress}{
         for(u32_t i=0; i<nodeDataParts.size(); ++i){
 
             if(i==3){ /// The third one is specific dimensions and data
+                name = toLowerCase(name);
+                std::cout<<"aaaBEFORE::::::"<<name<<std::endl;
                 if (name.find(Constant) != std::string::npos){
-                    constantnode.name = name;
-                    nodes.push_back(constantnode);
+                    /// nothing to be done
                 }else if(name.find(Sub) != std::string::npos || name.find(Add) != std::string::npos || name.find(Mul) != std::string::npos || name.find(Div) != std::string::npos){
+                    std::cout<<"Node: "<<name<<std::endl;
                     basicnode = parseBasicNodeString(nodeDataParts[2]);
                     basicnode.typestr = nodeDataParts[0];
                     basicnode.name = name;
                     basicnode.Intervalvalues = convertMatricesToIntervalMatrices(basicnode.values);
                     nodes.push_back(basicnode);
                 }else if(name.find(Gemm) != std::string::npos){
+                    std::cout<<"Node: "<<name<<std::endl;
                     std::cout<<"jj="<<jj<<std::endl;
                     gemmnode = GEMMparseAndFormat(nodeDataParts[2]);
                     gemmnode.gemmName = name;
@@ -111,6 +126,7 @@ SVFNN::SVFNN(std::string adress): onnxAdress{adress}{
                     gemmnode.Intervalbias = convertMatToIntervalMat(bias);
                     nodes.push_back(gemmnode);
                 }else if(name.find(Conv) != std::string::npos){
+                    std::cout<<"Node: "<<name<<std::endl;
                     /// Refer to GEMM
                     ConvParams conf = ConvparseAndFormat(nodeDataParts[2]);
                     /// filter: filters
@@ -130,11 +146,17 @@ SVFNN::SVFNN(std::string adress): onnxAdress{adress}{
                     }
                     nodes.push_back(convnode);
                 }else if(name.find(Relu) != std::string::npos){
+                    std::cout<<"Node: "<<name<<std::endl;
                     relunode.name = name;
                     nodes.push_back(relunode);
                 }else if(name.find(MaxPool) != std::string::npos){
+                    std::cout<<"Node: "<<name<<std::endl;
                     maxpoolnode.name = name;
                     /// Add windows and strides
+                    std::cout<<"YYYYYYYYYYname:"<<name<<std::endl;
+                    for(maxPoolItems.begin(); maxPoolItems.end(); maxPoolItems++){
+                        std::cout<<"maxPoolItems:"<<maxPoolItems->first<<std::endl;
+                    }
                     if(maxPoolItems.find(name) != maxPoolItems.end()){
                         auto maxInfo = maxPoolItems[name];
                         maxpoolnode.windows = maxInfo.first;
@@ -143,6 +165,7 @@ SVFNN::SVFNN(std::string adress): onnxAdress{adress}{
                     }
                     nodes.push_back(maxpoolnode);
                 }else if(name.find(Flatten) != std::string::npos){
+                    std::cout<<"Node: "<<name<<std::endl;
                     flattennode.name = name;
                     nodes.push_back(flattennode);
                 }
@@ -258,8 +281,8 @@ std::string SVFNN::PyObjectToString(PyObject *pObj) {
     return result;
 }
 
-std::map<std::string, std::string> SVFNN::processPythonDict(PyObject *pDict) {
-    std::map<std::string, std::string> cppMap;
+std::vector<std::pair<std::string, std::string>> SVFNN::processPythonDict(PyObject *pDict) {
+    std::vector<std::pair<std::string, std::string>> cppMap;
 
     if (!PyDict_Check(pDict)) {
         std::cerr << "Provided object is not a dictionary." << std::endl;
@@ -272,17 +295,17 @@ std::map<std::string, std::string> SVFNN::processPythonDict(PyObject *pDict) {
     while (PyDict_Next(pDict, &pos, &pKey, &pValue)) {
         std::string key = PyObjectToString(pKey);
         std::string value = PyObjectToString(pValue);  /// Simplify processing by directly converting values to strings
-        cppMap[key] = value;
+        cppMap.emplace_back(key, value);
     }
 
     return cppMap;
 }
 
-std::map<std::string, std::string> SVFNN::callPythonFunction(const std::string& address, const std::string& functionName) {
+std::vector<std::pair<std::string, std::string>> SVFNN::callPythonFunction(const std::string& address, const std::string& functionName) {
     Py_Initialize();
 
     PyObject *pModule, *pFunc, *pArgs, *pValue;
-    std::map<std::string, std::string> cppMap;
+    std::vector<std::pair<std::string, std::string>> cppMap;
     std::string pathstring;
 
     PyRun_SimpleString("import sys");
