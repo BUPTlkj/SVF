@@ -153,10 +153,6 @@ SVFNN::SVFNN(std::string adress): onnxAdress{adress}{
                     std::cout<<"Node: "<<name<<std::endl;
                     maxpoolnode.name = name;
                     /// Add windows and strides
-                    std::cout<<"YYYYYYYYYYname:"<<name<<std::endl;
-                    for(maxPoolItems.begin(); maxPoolItems.end(); maxPoolItems++){
-                        std::cout<<"maxPoolItems:"<<maxPoolItems->first<<std::endl;
-                    }
                     if(maxPoolItems.find(name) != maxPoolItems.end()){
                         auto maxInfo = maxPoolItems[name];
                         maxpoolnode.windows = maxInfo.first;
@@ -204,7 +200,7 @@ std::map<std::string, std::pair<std::pair<u32_t, u32_t>, std::pair<u32_t, u32_t>
     std::map<std::string, std::pair<std::pair<u32_t, u32_t>, std::pair<u32_t, u32_t>>> result;
     for (const auto& item : items) {
         auto key_value = parseItem(item);
-        if (key_value.first.find("Conv") != std::string::npos) {
+        if (key_value.first.find("conv") != std::string::npos) {
             /// if value's format is correct
             u32_t px, py, px_, py_, sx, sy;
             sscanf(key_value.second.c_str(), " ['pads:', [%d, %d, %d, %d], 'strides:', [%d, %d]]", &px, &py, &px_, &py_, &sx, &sy); // �����ַ���Ϊ��������
@@ -219,7 +215,7 @@ SVFNN::parseMaxPoolItems(const std::vector<std::string> &items) {
     std::map<std::string, std::pair<std::pair<u32_t, u32_t>, std::pair<std::pair<u32_t, u32_t>, std::pair<u32_t, u32_t>>>> result;
     for (const auto& item : items) {
         auto key_value = parseItem(item);
-        if (key_value.first.find("MaxPool") != std::string::npos) {
+        if (key_value.first.find("maxpool") != std::string::npos) {
             /// if value's format is correct
             u32_t wx, wy, px, py, px_, py_, sx, sy;
             sscanf(key_value.second.c_str(), " ['Windows:', [%d, %d], 'pads:', [%d, %d, %d, %d], 'strides:', [%d, %d]]", &wx, &wy, &px, &py,  &px_, &py_, &sx, &sy); // �����ַ���Ϊ�ĸ�����

@@ -607,7 +607,6 @@ def conv_filter(model_path):
 def get_strides(model_path):
 	res = {}
 	model, is_conv = read_onnx_net(model_path)
-	shape_map, constants_map, output_node_map, input_node_map, placeholdernames = prepare_model(model)
 	# Node list of dependency relationships between input and output nodes arranged in topological order
 	nodes = model.graph.node
 	for node_idx, node in enumerate(nodes):
@@ -625,10 +624,8 @@ def get_strides(model_path):
 					info.append("pads:")
 					info.append(pads)
 
-			if node_idx < 10:
-				conv_name = "0" + str(node_idx) + "_" + node.op_type
-			else:
-				conv_name = str(node_idx) + "_" + node.op_type
+			conv_name = node.op_type.strip() + '_' + node.name.replace('\"', '').replace(' ', '')
+			conv_name = conv_name.lower()
 
 			res[conv_name] = info
 
@@ -648,19 +645,10 @@ def get_strides(model_path):
 					info.append("pads:")
 					info.append(pads)
 
-			if node_idx < 10:
-				maxpool_name = "0" + str(node_idx) + "_" + node.op_type
-			else:
-				maxpool_name = str(node_idx) + "_" + node.op_type
+			maxpool_name = node.op_type.strip() + '_' + node.name.replace('\"', '').replace(' ', '')
+			maxpool_name = maxpool_name.lower()
+
 			res[maxpool_name] = info
 
 	return res
-
-
-if __name__ == "__main__":
-	onnxpath = "/Users/den184/Documents/UNSW/SVF/SVF-Kane/svf-onnx/dataset/mnist_conv_maxpool.onnx"
-
-	res  = InteractwithCpp(onnxpath)
-
-	print(res)
 
