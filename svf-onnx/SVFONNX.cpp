@@ -531,6 +531,50 @@ ConvParams SVFNN::ConvparseAndFormat(const std::string& input) {
     return params;
 }
 
+std::vector<Eigen::MatrixXd> transpose_nhw_hnw(const Matrices & matrices) {
+    // Check if the input vector is empty and return an empty vector if true
+    if (matrices.empty()) {
+        return {};
+    }
+
+    // // Determine the original dimensions
+    // int channels = matrices.size();  // Number of channels (original first dimension)
+    // int height = matrices[0].rows(); // Height (original second dimension)
+    // int width = matrices[0].cols();  // Width (original third dimension)
+
+    // Determine the original dimensions
+    int channels = matrices[0].cols();  // Number of channels (original first dimension)
+    int height = matrices.size(); // Height (original second dimension)
+    int width = matrices[0].rows();  // Width (original third dimension)
+
+    // Prepare the container for the transposed matrices
+    // Matrices transposed(height, Mat (width, channels));
+
+    Matrices transposed(channels, Mat (height, width));
+
+    // Fill the transposed matrices
+    // for (int h = 0; h < height; ++h) {
+    //     for (int w = 0; w < width; ++w) {
+    //         for (int c = 0; c < channels; ++c) {
+
+    for (int c = 0; c < channels; ++c) {
+        for (int h = 0; h < height; ++h) {
+            for (int w = 0; w < width; ++w) {
+
+
+
+                transposed[c](h, w) = matrices[h](w, c);
+
+
+
+                // transposed[h](w, c) = matrices[c](h, w);
+            }
+        }
+    }
+
+    return transposed;
+}
+
 std::vector<FilterSubNode> SVFNN::parse_filters(const std::string &s, u32_t num_filters, u32_t kernel_height,
                                           u32_t kernel_width,  u32_t kernel_depth)  {
 
@@ -589,8 +633,14 @@ std::vector<FilterSubNode> SVFNN::parse_filters(const std::string &s, u32_t num_
             }
             matrices.push_back(mat);
         }
-        IntervalMatrices intervalmatrices = convertMatricesToIntervalMatrices(matrices);
-        filters.emplace_back(matrices, intervalmatrices);
+
+        std::cout<<"IIIIII"<<std::endl;
+        std::cout<<matrices.size()<<", "<<matrices[0].rows()<<", "<<matrices[0].cols()<<std::endl;
+        std::cout<<transpose_nhw_hnw(matrices).size()<<", "<<transpose_nhw_hnw(matrices)[0].rows()<<", "<<transpose_nhw_hnw(matrices)[0].cols()<<std::endl;
+
+
+        IntervalMatrices intervalmatrices = convertMatricesToIntervalMatrices(transpose_nhw_hnw(matrices));
+        filters.emplace_back(transpose_nhw_hnw(matrices), intervalmatrices);
     }
     return filters;
 }

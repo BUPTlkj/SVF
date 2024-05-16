@@ -221,7 +221,7 @@ Matrices SolverEvaluate::FullyConNeuronNodeevaluate( const FullyConNeuronNode *f
 
 Matrices SolverEvaluate::ConvNeuronNodeevaluate( const ConvNeuronNode *conv) const{
     std::cout<<"ConvNodeing......"<<conv->getId()<<std::endl;
-    std::ofstream outFile_ConvOp("outFile_ConvOp.txt", std::ios_base::app);
+    std::ofstream outFile_ConvOp("outFile_ConvOp.txt");
 
     for(auto mat:in_x)
     {
@@ -234,6 +234,16 @@ Matrices SolverEvaluate::ConvNeuronNodeevaluate( const ConvNeuronNode *conv) con
     u32_t stride = conv->get_stride();
     u32_t padding = conv->get_padding();
     std::vector<FilterSubNode> filter = conv->get_filter();
+
+    for(auto fil:filter)
+    {
+        std::cout<< "Filter Matrix: " << std::endl<<std::endl;
+        for(auto mat:fil.value)
+        {
+            std::cout<< mat << std::endl;
+        }
+        std::cout<<std::endl;
+    }
 
     // u32_t filter_depth = conv->get_filter_depth();
     u32_t filter_depth = filter[0].value.size();
@@ -265,12 +275,12 @@ Matrices SolverEvaluate::ConvNeuronNodeevaluate( const ConvNeuronNode *conv) con
         padded_x[i].block(padding, padding, in_x[i].rows(), in_x[i].cols()) = in_x[i];
     }
 
-    std::ofstream outFile_bias("output_bias.txt", std::ios_base::app);
-    outFile_bias << "Conv Node ID: " << conv->getId() << std::endl;
+    std::ofstream outFile_bias("output_bias.txt");
+    outFile_bias << "Conv Node ID: " << conv->get_type() << std::endl;
 
 
 
-    outFile_ConvOp << "Conv Node ID: " << conv->getId() << std::endl;
+    outFile_ConvOp << "Conv Node ID: " << conv->get_type()<< std::endl;
 
     /// Calculate the output feature map based on filling and step size
     Matrices out(filter_num, Mat(out_height, out_width));

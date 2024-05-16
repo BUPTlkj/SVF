@@ -805,7 +805,7 @@ int main(int argc, char** argv)
         std::cout<<"Matrix size: "<<matt[0].cols()<<std::endl;
         
        
-        nngraph.Traversal(matt);
+        nngraph.Traversal(mats);
     // nngraph.Traversal(x.second.front());
 
     //    /// Run abstract interpretation on NNgraph Interval
