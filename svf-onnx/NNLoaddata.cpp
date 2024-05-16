@@ -161,3 +161,30 @@ std::vector<std::pair<u32_t , IntervalMatrices>> LoadData::convertLabelAndBounds
 
     return result;
 }
+
+// Function to transpose a std::vector<Eigen::MatrixXd> according to the (1, 0, 2) pattern
+std::vector<Eigen::MatrixXd> LoadData::transpose_nhw_hnw(const Matrices & matrices) {
+    // Check if the input vector is empty and return an empty vector if true
+    if (matrices.empty()) {
+        return {};
+    }
+
+    // Determine the original dimensions
+    int channels = matrices.size();  // Number of channels (original first dimension)
+    int height = matrices[0].rows(); // Height (original second dimension)
+    int width = matrices[0].cols();  // Width (original third dimension)
+
+    // Prepare the container for the transposed matrices
+    Matrices transposed(height, Mat (width, channels));
+
+    // Fill the transposed matrices
+    for (int h = 0; h < height; ++h) {
+        for (int w = 0; w < width; ++w) {
+            for (int c = 0; c < channels; ++c) {
+                transposed[h](w, c) = matrices[c](h, w);
+            }
+        }
+    }
+
+    return transposed;
+}

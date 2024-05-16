@@ -531,8 +531,9 @@ ConvParams SVFNN::ConvparseAndFormat(const std::string& input) {
     return params;
 }
 
-std::vector<FilterSubNode> SVFNN::parse_filters(const std::string &s, u32_t num_filters,  u32_t kernel_height,
+std::vector<FilterSubNode> SVFNN::parse_filters(const std::string &s, u32_t num_filters, u32_t kernel_height,
                                           u32_t kernel_width,  u32_t kernel_depth)  {
+
     std::vector<std::vector<std::vector<std::vector<double>>>> data(num_filters, std::vector<std::vector<std::vector<double>>>(kernel_depth, std::vector<std::vector<double>>(kernel_height, std::vector<double>(kernel_width))));
 
     std::stringstream ss(s);
@@ -559,14 +560,31 @@ std::vector<FilterSubNode> SVFNN::parse_filters(const std::string &s, u32_t num_
             }
         }
     }
+
+    std::vector<double> filter_values;
+    for(auto batch : data){
+        for(auto depth : batch){
+            for(auto row : depth){
+                for(auto val : row){
+                    filter_values.push_back(val);
+                }
+            }
+        }
+    }
+
     std::vector<FilterSubNode> filters;
+    u32_t index = 0;
+
     for (u32_t n = 0; n < num_filters; ++n) {
         Matrices matrices;
-        for (u32_t d = 0; d < kernel_depth; ++d) {
-            Mat mat(kernel_height, kernel_width);
-            for (u32_t h = 0; h < kernel_height; ++h) {
-                for (u32_t w = 0; w < kernel_width; ++w) {
-                    mat(h, w) = data[n][d][h][w];
+        // for (u32_t d = 0; d < kernel_depth; ++d) {
+        for (u32_t d = 0; d < kernel_height; ++d) {
+            Mat mat(kernel_width, kernel_depth);
+            for (u32_t h = 0; h < kernel_width; ++h) {
+                for (u32_t w = 0; w < kernel_depth; ++w) {
+                    // mat(h, w) = data[n][d][h][w];
+                    mat(h, w) = filter_values[index];
+                    index++;
                 }
             }
             matrices.push_back(mat);
@@ -576,6 +594,8 @@ std::vector<FilterSubNode> SVFNN::parse_filters(const std::string &s, u32_t num_
     }
     return filters;
 }
+
+
 
 std::vector<double> SVFNN::parse_Convbiasvector(std::string s) {
     /// Check and remove the [] around the vector

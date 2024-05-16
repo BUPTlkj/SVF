@@ -1,4 +1,5 @@
 #include "AE/Nnexe/Solver.h"
+#include <fstream>
 
 using namespace SVF;
 
@@ -220,17 +221,36 @@ Matrices SolverEvaluate::FullyConNeuronNodeevaluate( const FullyConNeuronNode *f
 
 Matrices SolverEvaluate::ConvNeuronNodeevaluate( const ConvNeuronNode *conv) const{
     std::cout<<"ConvNodeing......"<<conv->getId()<<std::endl;
+    std::ofstream outFile_ConvOp("outFile_ConvOp.txt", std::ios_base::app);
+
+    for(auto mat:in_x)
+    {
+        outFile_ConvOp<< "Input Matrix: " << mat << std::endl;
+    }
+
+    outFile_ConvOp<<std::endl;
 
     u32_t filter_num = conv->get_filter_num();
     u32_t stride = conv->get_stride();
     u32_t padding = conv->get_padding();
     std::vector<FilterSubNode> filter = conv->get_filter();
-    u32_t filter_depth = conv->get_filter_depth();
-    u32_t filter_height = conv->get_filter_height();
-    u32_t filter_width = conv->get_filter_width();
+
+    // u32_t filter_depth = conv->get_filter_depth();
+    u32_t filter_depth = filter[0].value.size();
+
+    // u32_t filter_height = conv->get_filter_height();
+    u32_t filter_height = filter[0].value[0].rows();
+    // u32_t filter_width = conv->get_filter_width();
+    u32_t filter_width = filter[0].value[0].cols();
+
     std::vector<double> bias = conv->get_bias();
-    u32_t out_height = ((in_x[0].rows() - filter[0].get_height() + 2*padding) / stride) + 1;
-    u32_t out_width = ((in_x[0].cols() - filter[0].get_width() + 2*padding) / stride) + 1;
+
+    // u32_t filter_depth = conv->get_filter_depth();
+    // u32_t filter_height = conv->get_filter_height();
+    // u32_t filter_width = conv->get_filter_width();
+    // std::vector<double> bias = conv->get_bias();
+    u32_t out_height = ((in_x[0].rows() - filter_height + 2*padding) / stride) + 1;
+    u32_t out_width = ((in_x[0].cols() - filter_width + 2*padding) / stride) + 1;
 
     std::cout << "Filter number " << filter_num << std::endl;
     std::cout << "Filter channel " << filter_depth << std::endl;
@@ -245,6 +265,13 @@ Matrices SolverEvaluate::ConvNeuronNodeevaluate( const ConvNeuronNode *conv) con
         padded_x[i].block(padding, padding, in_x[i].rows(), in_x[i].cols()) = in_x[i];
     }
 
+    std::ofstream outFile_bias("output_bias.txt", std::ios_base::app);
+    outFile_bias << "Conv Node ID: " << conv->getId() << std::endl;
+
+
+
+    outFile_ConvOp << "Conv Node ID: " << conv->getId() << std::endl;
+
     /// Calculate the output feature map based on filling and step size
     Matrices out(filter_num, Mat(out_height, out_width));
     for (u32_t i = 0; i < filter_num; i++) {
@@ -258,11 +285,21 @@ Matrices SolverEvaluate::ConvNeuronNodeevaluate( const ConvNeuronNode *conv) con
                             u32_t row = k * stride + j_;
                             u32_t col = j * stride + k_;
                             if (row < padded_x[i_].rows() && col < padded_x[i_].cols()) {
+
+                                outFile_ConvOp << "Input Coor: " << i_ << row << col << "; Input Pre-conv value: " << padded_x[i_](row, col) <<
+                                    "; Filter order: " << i << "; Filter Coor: " << i_ << j_ << k_ << "; Filter Value: " << filter[i].value[i_](j_, k_) <<
+                                    "; Conv sum: " << filter[i].value[i_](j_, k_) * padded_x[i_](row, col) << std::endl;
+
+
                                 sum += filter[i].value[i_](j_, k_) * padded_x[i_](row, col);
                             }
                         }
                     }
                 }
+
+                outFile_bias << "Output Coor: " << i << j << k << "; pre-bias:" << sum << "; bias:" << bias[i] <<
+                                    "; Final_val:" << sum + bias[i] << std::endl;
+
                 /// Calculate the output at the current position and add a bias
                 out[i](k, j) = sum + bias[i];
             }

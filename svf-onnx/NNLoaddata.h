@@ -48,6 +48,9 @@ public:
     std::vector<LabelAndBounds> perturbateImages( const std::pair<LabelVector, MatrixVector_3c>& labelImagePairs, double eps);
 
     std::vector<std::pair<u32_t , IntervalMatrices>> convertLabelAndBoundsToIntervalMatrices(const std::vector<LabelAndBounds>& labelAndBoundsVec);
+
+    std::vector<Eigen::MatrixXd> transpose_nhw_hnw(const Matrices & matrices);
+
     };
 }
 
