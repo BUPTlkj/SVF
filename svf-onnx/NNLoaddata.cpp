@@ -98,6 +98,8 @@ std::pair<LabelVector, MatrixVector_3c> LoadData::read_dataset(){
         }
         file_cifar.close();
 
+    }else if (dataset.find("acasxu") != std::string::npos)
+    {
     }
     return std::make_pair(labels, matrixes_3c);
 }
