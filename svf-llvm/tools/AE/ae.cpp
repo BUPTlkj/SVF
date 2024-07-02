@@ -747,66 +747,13 @@ int main(int argc, char** argv)
        LoadData dataset(datapath, 1);
        /// Input pixel matrix
        std::pair<LabelVector, MatrixVector_3c> x = dataset.read_dataset();
-       // std::cout<<"Label: "<<x.first.front()<<std::endl;
+       std::cout<<"Label: "<<x.first.front()<<std::endl;
 
-    //    double perti = 0.001;
-    //    std::vector<LabelAndBounds> per_x = dataset.perturbateImages(x, perti);
+       double perti = 0.001;
+       std::vector<LabelAndBounds> per_x = dataset.perturbateImages(x, perti);
 
        /// Run abstract interpretation on NNgraph
-
-        Mat matrix0(8, 8);
-        Mat matrix1(8, 8);
-        Mat matrix2(8, 8);
-        Matrices mats;
-
-        matrix0 <<
-            0.1523, 0.6152, 0.7813, 0.2013, 0.4657, 0.3122, 0.9834, 0.6745,
-            0.4565, 0.1239, 0.8765, 0.7621, 0.2109, 0.5402, 0.1087, 0.9283,
-            0.6827, 0.5734, 0.1908, 0.0356, 0.8964, 0.7653, 0.2109, 0.4168,
-            0.9572, 0.4853, 0.7319, 0.9157, 0.1712, 0.9935, 0.5278, 0.2920,
-            0.9382, 0.1763, 0.5117, 0.6216, 0.4518, 0.1380, 0.8712, 0.3928,
-            0.8491, 0.2759, 0.5298, 0.1321, 0.7914, 0.6307, 0.4059, 0.7940,
-            0.6555, 0.3316, 0.1270, 0.4833, 0.6741, 0.8573, 0.9946, 0.1382,
-            0.2987, 0.6326, 0.9638, 0.3447, 0.1329, 0.8796, 0.9237, 0.6239;
-
-        mats.push_back(matrix0);
-
-        matrix1 <<
-            0.7416, 0.5454, 0.0782, 0.2673, 0.3637, 0.1589, 0.1397, 0.3935,
-            0.9339, 0.4017, 0.4629, 0.1104, 0.9167, 0.7280, 0.5240, 0.4681,
-            0.6623, 0.1465, 0.0519, 0.8317, 0.9636, 0.4003, 0.7753, 0.7506,
-            0.8249, 0.6362, 0.1959, 0.9026, 0.7696, 0.2706, 0.3796, 0.5390,
-            0.2539, 0.9583, 0.8753, 0.3819, 0.6211, 0.3104, 0.0586, 0.1519,
-            0.1338, 0.4104, 0.4034, 0.6226, 0.6871, 0.2581, 0.5601, 0.9425,
-            0.9761, 0.8184, 0.0824, 0.3965, 0.7115, 0.5365, 0.3036, 0.8442,
-            0.7255, 0.8164, 0.9452, 0.2346, 0.9093, 0.8230, 0.6509, 0.9971;
-
-        mats.push_back(matrix1);
-
-        matrix2 <<
-            0.4352, 0.4629, 0.9906, 0.1272, 0.3095, 0.8240, 0.5988, 0.8124,
-            0.2109, 0.5469, 0.7701, 0.4873, 0.1907, 0.3450, 0.3141, 0.6903,
-            0.6390, 0.8795, 0.7878, 0.8185, 0.5318, 0.9087, 0.1396, 0.1650,
-            0.0187, 0.7902, 0.6102, 0.1164, 0.8632, 0.4386, 0.6202, 0.4276,
-            0.9163, 0.9785, 0.5454, 0.1289, 0.2046, 0.8605, 0.4218, 0.1642,
-            0.2673, 0.8841, 0.6548, 0.6135, 0.4191, 0.4862, 0.1024, 0.1962,
-            0.5313, 0.5920, 0.6284, 0.8210, 0.2920, 0.9228, 0.2764, 0.1430,
-            0.7401, 0.7359, 0.8191, 0.6564, 0.5879, 0.2837, 0.7856, 0.3117;
-        
-        mats.push_back(matrix2);
-        std::cout<<"Matrix size: "<<mats.size()<<std::endl;
-        std::cout<<"Matrix size: "<<mats[0].rows()<<std::endl;
-        std::cout<<"Matrix size: "<<mats[0].cols()<<std::endl;
-
-        auto matt = dataset.transpose_nhw_hnw(mats);
-
-        std::cout<<"Matrix size: "<<matt.size()<<std::endl;
-        std::cout<<"Matrix size: "<<matt[0].rows()<<std::endl;
-        std::cout<<"Matrix size: "<<matt[0].cols()<<std::endl;
-        
-       
-        nngraph.Traversal(mats);
-    // nngraph.Traversal(x.second.front());
+       nngraph.Traversal(x.second.front());
 
     //    /// Run abstract interpretation on NNgraph Interval
     //    std::vector<std::pair<u32_t, IntervalMatrices>> in_x = dataset.convertLabelAndBoundsToIntervalMatrices(per_x) ;
