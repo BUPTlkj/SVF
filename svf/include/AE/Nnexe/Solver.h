@@ -2,7 +2,7 @@
 #ifndef SVF_SOLVER_H
 #define SVF_SOLVER_H
 
-#include "Eigen/Dense"
+#include "Eigen/Core"
 #include "Graphs/NNGraph.h"
 namespace  SVF
 {

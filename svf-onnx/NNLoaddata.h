@@ -3,7 +3,7 @@
 #ifndef SVF_NNLOADDATA_H
 #define SVF_NNLOADDATA_H
 
-#include "Eigen/Dense"
+#include "Eigen/Core"
 #include "Graphs/NNNode.h"
 #include "iostream"
 #include "fstream"

@@ -4,7 +4,7 @@
 #include "cstdlib"
 #include "GenericGraph.h"
 #include "NNEdge.h"
-#include "Eigen/Dense"
+#include "Eigen/Core"
 #include "AE/Core/IntervalValue.h"
 #include "variant"
 

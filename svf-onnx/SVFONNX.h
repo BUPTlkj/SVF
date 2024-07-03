@@ -1,6 +1,6 @@
 #ifndef SVF_ONNX_SVFONNX_H
 #define SVF_ONNX_SVFONNX_H
-#include "Eigen/Dense"
+#include "Eigen/Core"
 #include "Graphs/NNGraph.h"
 #include "Python.h"
 #include "fstream"

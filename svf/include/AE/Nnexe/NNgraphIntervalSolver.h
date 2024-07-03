@@ -1,7 +1,9 @@
 #ifndef SVF_NNGRAPHINTERVALSOLVER_H
 #define SVF_NNGRAPHINTERVALSOLVER_H
 #include "AE/Core/IntervalValue.h"
-#include "Eigen/Dense"
+// #include "Eigen/Dense"
+
+#include "Eigen/Core"
 #include "Graphs/NNNode.h"
 
 namespace SVF
