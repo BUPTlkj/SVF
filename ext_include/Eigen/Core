@@ -359,7 +359,7 @@ using std::ptrdiff_t;
 // #include "src/Core/Transpositions.h"
 #include "src/Core/TriangularMatrix.h"
 #include "src/Core/SelfAdjointView.h"
-
+// ----------------- checked -----------------
 
 #include "src/Core/products/GeneralBlockPanelKernel.h"
 #include "src/Core/products/Parallelizer.h"
@@ -368,17 +368,19 @@ using std::ptrdiff_t;
 #include "src/Core/products/GeneralMatrixMatrix.h"
 #include "src/Core/SolveTriangular.h"
 #include "src/Core/products/GeneralMatrixMatrixTriangular.h"
-#include "src/Core/products/SelfadjointMatrixVector.h"
-#include "src/Core/products/SelfadjointMatrixMatrix.h"
-#include "src/Core/products/SelfadjointProduct.h"
+//#include "src/Core/products/SelfadjointMatrixVector.h"
+//#include "src/Core/products/SelfadjointMatrixMatrix.h"
+//#include "src/Core/products/SelfadjointProduct.h"
 #include "src/Core/products/SelfadjointRank2Update.h"
-#include "src/Core/products/TriangularMatrixVector.h"
-#include "src/Core/products/TriangularMatrixMatrix.h"
-#include "src/Core/products/TriangularSolverMatrix.h"
-#include "src/Core/products/TriangularSolverVector.h"
-#include "src/Core/BandMatrix.h"
-#include "src/Core/CoreIterators.h"
-#include "src/Core/ConditionEstimator.h"
+//#include "src/Core/products/TriangularMatrixVector.h"
+//#include "src/Core/products/TriangularMatrixMatrix.h"
+//#include "src/Core/products/TriangularSolverMatrix.h"
+//#include "src/Core/products/TriangularSolverVector.h"
+//#include "src/Core/BandMatrix.h"
+// #include "src/Core/CoreIterators.h"
+// #include "src/Core/ConditionEstimator.h"
+
+// ----------------- checked -----------------
 
 /*
 #if defined(EIGEN_VECTORIZE_ALTIVEC) || defined(EIGEN_VECTORIZE_VSX)
