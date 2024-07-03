@@ -181,7 +181,7 @@ using std::ptrdiff_t;
 #include "src/Core/arch/Default/TypeCasting.h"
 #include "src/Core/arch/Default/GenericPacketMathFunctionsFwd.h"
 
-
+/*
 #if defined EIGEN_VECTORIZE_AVX512
   #include "src/Core/arch/SSE/PacketMath.h"
   #include "src/Core/arch/SSE/TypeCasting.h"
@@ -249,6 +249,8 @@ using std::ptrdiff_t;
 #endif
 #endif
 
+*/
+
 
 #include "src/Core/arch/Default/Settings.h"
 // This file provides generic implementations valid for scalar as well
@@ -264,9 +266,11 @@ using std::ptrdiff_t;
 
 // Specialized functors to enable the processing of complex numbers
 // on CUDA devices
+/*
 #ifdef EIGEN_CUDACC
 #include "src/Core/arch/CUDA/Complex.h"
 #endif
+*/
 
 #include "src/Core/util/IndexedViewHelper.h"
 #include "src/Core/util/ReshapedHelper.h"
