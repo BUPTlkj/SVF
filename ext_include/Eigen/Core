@@ -263,6 +263,8 @@ using std::ptrdiff_t;
 #include "src/Core/functors/StlFunctors.h"
 #include "src/Core/functors/AssignmentFunctors.h"
 
+// ----------------- checked -----------------
+
 
 // Specialized functors to enable the processing of complex numbers
 // on CUDA devices
@@ -274,10 +276,14 @@ using std::ptrdiff_t;
 
 #include "src/Core/util/IndexedViewHelper.h"
 #include "src/Core/util/ReshapedHelper.h"
-#include "src/Core/ArithmeticSequence.h"
+// #include "src/Core/ArithmeticSequence.h"
+
+
 #ifndef EIGEN_NO_IO
   #include "src/Core/IO.h"
 #endif
+
+// ----------------- checked -----------------
 
 
 #include "src/Core/DenseCoeffsBase.h"
@@ -288,36 +294,50 @@ using std::ptrdiff_t;
 #include "src/Core/Product.h"
 #include "src/Core/CoreEvaluators.h"
 #include "src/Core/AssignEvaluator.h"
+// ----------------- checked -----------------
+
 
 #ifndef EIGEN_PARSED_BY_DOXYGEN // work around Doxygen bug triggered by Assign.h r814874
                                 // at least confirmed with Doxygen 1.5.5 and 1.5.6
   #include "src/Core/Assign.h"
 #endif
 
+
 #include "src/Core/ArrayBase.h"
+
+// ----------------- checked -----------------
+
+
 #include "src/Core/util/BlasUtil.h"
 #include "src/Core/DenseStorage.h"
-#include "src/Core/NestByValue.h"
+
+// #include "src/Core/NestByValue.h"
 
 // #include "src/Core/ForceAlignedAccess.h"
 
-#include "src/Core/ReturnByValue.h"
-#include "src/Core/NoAlias.h"
+// #include "src/Core/ReturnByValue.h"
+// #include "src/Core/NoAlias.h"
 #include "src/Core/PlainObjectBase.h"
+// ----------------- checked -----------------
+
 #include "src/Core/Matrix.h"
 #include "src/Core/Array.h"
-#include "src/Core/CwiseTernaryOp.h"
+
+//#include "src/Core/CwiseTernaryOp.h"
 #include "src/Core/CwiseBinaryOp.h"
-#include "src/Core/CwiseUnaryOp.h"
+// #include "src/Core/CwiseUnaryOp.h"
 #include "src/Core/CwiseNullaryOp.h"
-#include "src/Core/CwiseUnaryView.h"
-#include "src/Core/SelfCwiseBinaryOp.h"
+// #include "src/Core/CwiseUnaryView.h"
+// #include "src/Core/SelfCwiseBinaryOp.h"
+
+// ----------------- checked -----------------
+
 #include "src/Core/Dot.h"
-#include "src/Core/StableNorm.h"
+//#include "src/Core/StableNorm.h"
 #include "src/Core/Stride.h"
 #include "src/Core/MapBase.h"
 #include "src/Core/Map.h"
-#include "src/Core/Ref.h"
+//#include "src/Core/Ref.h"
 #include "src/Core/Block.h"
 #include "src/Core/VectorBlock.h"
 #include "src/Core/IndexedView.h"
