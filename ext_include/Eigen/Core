@@ -178,8 +178,8 @@ using std::ptrdiff_t;
 // Generic half float support
 #include "src/Core/arch/Default/Half.h"
 #include "src/Core/arch/Default/BFloat16.h"
-#include "src/Core/arch/Default/TypeCasting.h"
-#include "src/Core/arch/Default/GenericPacketMathFunctionsFwd.h"
+//#include "src/Core/arch/Default/TypeCasting.h"
+//#include "src/Core/arch/Default/GenericPacketMathFunctionsFwd.h"
 
 /*
 #if defined EIGEN_VECTORIZE_AVX512
@@ -254,9 +254,9 @@ using std::ptrdiff_t;
 
 #include "src/Core/arch/Default/Settings.h"
 // This file provides generic implementations valid for scalar as well
-#include "src/Core/arch/Default/GenericPacketMathFunctions.h"
+//#include "src/Core/arch/Default/GenericPacketMathFunctions.h"
 
-#include "src/Core/functors/TernaryFunctors.h"
+//#include "src/Core/functors/TernaryFunctors.h"
 #include "src/Core/functors/BinaryFunctors.h"
 #include "src/Core/functors/UnaryFunctors.h"
 #include "src/Core/functors/NullaryFunctors.h"
@@ -390,15 +390,15 @@ using std::ptrdiff_t;
 #endif
 */
 
-#include "src/Core/BooleanRedux.h"
-#include "src/Core/Select.h"
+// #include "src/Core/BooleanRedux.h"
+// #include "src/Core/Select.h"
 #include "src/Core/VectorwiseOp.h"
-#include "src/Core/PartialReduxEvaluator.h"
-#include "src/Core/Random.h"
-#include "src/Core/Replicate.h"
-#include "src/Core/Reverse.h"
+// #include "src/Core/PartialReduxEvaluator.h"
+// #include "src/Core/Random.h"
+// #include "src/Core/Replicate.h"
+// #include "src/Core/Reverse.h"
 #include "src/Core/ArrayWrapper.h"
-#include "src/Core/StlIterators.h"
+// #include "src/Core/StlIterators.h"
 
 /*
 #ifdef EIGEN_USE_BLAS
@@ -417,8 +417,9 @@ using std::ptrdiff_t;
 #endif
 */
 
-#include "src/Core/GlobalFunctions.h"
+// #include "src/Core/GlobalFunctions.h"
 
 #include "src/Core/util/ReenableStupidWarnings.h"
+// ----------------- checked -----------------
 
 #endif // EIGEN_CORE_H
